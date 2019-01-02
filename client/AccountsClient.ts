@@ -17,7 +17,7 @@ import {
     SignTransactionRequest,
     SignTransactionResult,
     ExportRequest,
-    ChangePassphraseRequest,
+    ChangePasswordRequest,
     AddAccountRequest,
     AddAccountResult,
     RenameRequest,
@@ -99,8 +99,8 @@ export default class AccountsClient {
         return this._request(requestBehavior, RequestType.EXPORT, [request]);
     }
 
-    public changePassphrase(
-        request: ChangePassphraseRequest,
+    public changePassword(
+        request: ChangePasswordRequest,
         requestBehavior = this._defaultBehavior,
     ): Promise<SimpleResult> {
         return this._request(requestBehavior, RequestType.CHANGE_PASSPHRASE, [request]);

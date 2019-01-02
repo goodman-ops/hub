@@ -22,11 +22,11 @@ const LoginErrorHandler       = () => import(/*webpackChunkName: "login"*/ './vi
 
 const Export                  = () => import(/*webpackChunkName: "export"*/ './views/Export.vue');
 
-const ChangePassphrase        = () => import(/*webpackChunkName: "change-passphrase"*/ './views/ChangePassphrase.vue');
+const ChangePassword        = () => import(/*webpackChunkName: "change-password"*/ './views/ChangePassword.vue');
 
 const Logout                  = () => import(/*webpackChunkName: "logout"*/ './views/Logout.vue');
 const LogoutSuccess           = () => import(/*webpackChunkName: "logout"*/ './views/LogoutSuccess.vue');
-
+-password
 const AddAccount              = () => import(/*webpackChunkName: "add-account"*/ './views/AddAccount.vue');
 const AddAccountSuccess       = () => import(/*webpackChunkName: "add-account"*/ './views/AddAccountSuccess.vue');
 
@@ -185,7 +185,7 @@ export default new Router({
         },
         {
             path: `/${RequestType.CHANGE_PASSPHRASE}`,
-            component: ChangePassphrase,
+            component: ChangePassword,
             name: RequestType.CHANGE_PASSPHRASE,
         },
         {

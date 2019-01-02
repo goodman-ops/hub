@@ -10,7 +10,7 @@ export enum RequestType {
     SIGNUP = 'signup',
     LOGIN = 'login',
     EXPORT = 'export',
-    CHANGE_PASSPHRASE = 'change-passphrase',
+    CHANGE_PASSPHRASE = 'change-password',
     LOGOUT = 'logout',
     ADD_ACCOUNT = 'add-account',
     RENAME = 'rename',
@@ -176,13 +176,13 @@ export interface ParsedExportRequest {
     walletId: string;
 }
 
-export interface ChangePassphraseRequest {
+export interface ChangePasswordRequest {
     kind?: RequestType.CHANGE_PASSPHRASE;
     appName: string;
     walletId: string;
 }
 
-export interface ParsedChangePassphraseRequest {
+export interface ParsedChangePasswordRequest {
     kind: RequestType.CHANGE_PASSPHRASE;
     appName: string;
     walletId: string;
@@ -262,7 +262,7 @@ export type RpcRequest = SignTransactionRequest
                        | SignupRequest
                        | LoginRequest
                        | ExportRequest
-                       | ChangePassphraseRequest
+                       | ChangePasswordRequest
                        | LogoutRequest
                        | AddAccountRequest
                        | RenameRequest
@@ -273,7 +273,7 @@ export type ParsedRpcRequest = ParsedSignTransactionRequest
                              | ParsedSignupRequest
                              | ParsedLoginRequest
                              | ParsedExportRequest
-                             | ParsedChangePassphraseRequest
+                             | ParsedChangePasswordRequest
                              | ParsedLogoutRequest
                              | ParsedAddAccountRequest
                              | ParsedRenameRequest
@@ -355,12 +355,12 @@ export class AccountsRequest {
                     walletId: request.walletId,
                 } as ParsedExportRequest;
             case RequestType.CHANGE_PASSPHRASE:
-                request = request as ChangePassphraseRequest;
+                request = request as ChangePasswordRequest;
                 return {
                     kind: RequestType.CHANGE_PASSPHRASE,
                     appName: request.appName,
                     walletId: request.walletId,
-                } as ParsedChangePassphraseRequest;
+                } as ParsedChangePasswordRequest;
             case RequestType.LOGOUT:
                 request = request as LogoutRequest;
                 return {
@@ -446,7 +446,7 @@ export class AccountsRequest {
             case RequestType.EXPORT:
                 return request as ExportRequest;
             case RequestType.CHANGE_PASSPHRASE:
-                return request as ChangePassphraseRequest;
+                return request as ChangePasswordRequest;
             case RequestType.LOGOUT:
                 return request as LogoutRequest;
             case RequestType.ADD_ACCOUNT:

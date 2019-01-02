@@ -32,8 +32,8 @@ export default class SimpleSuccess extends Vue {
                 return 'Your Recovery Words export[br]was successful';
             case 'export-success':
                 return 'Your export[br]was successful';
-            case 'change-passphrase-success':
-                return 'You successfully changed your passphrase ';
+            case 'change-password-success':
+                return 'You successfully changed your password ';
             default:
                 throw new Error('No matching route');
         }
