@@ -92,8 +92,11 @@ export default class Checkout extends Vue {
 
         await this.handleOnboardingResult();
 
-        if (this.wallets.length === 0) this.goToOnboarding(true);
-        else this.getBalances();
+        if (this.wallets.length === 0) {
+            this.goToOnboarding(true);
+        } else {
+            this.getBalances();
+        }
     }
 
     private async getBalances() {
@@ -114,9 +117,10 @@ export default class Checkout extends Vue {
             // Reduce userfriendly addresses from that
             const addresses = accounts.map((account) => account.userFriendlyAddress);
 
-            // Get balances through pico consensus, also triggers head-change event
+            // Get balances, also triggers head-change event
             const network = (this.$refs.network as Network);
-            const balances: Map<string, number> = await network.connectPico(addresses);
+            await network.connect();
+            const balances: Map<string, number> = await network.getBalances(addresses);
 
             // Update accounts with their balances
             // (The accounts are still references to themselves in the wallets' accounts maps)

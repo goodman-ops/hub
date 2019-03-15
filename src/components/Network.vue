@@ -26,17 +26,8 @@ class Network extends Vue {
     private boundListeners: Array<[NetworkClient.Events, (...args: any[]) => void]> = [];
 
     public async connect() {
-        // Load network iframe
-        const client = await this._getNetworkClient();
-    }
-
-    public async connectPico(addresses: string[]): Promise<Map<string, number>> {
-        // Load network iframe
-        const client = await this._getNetworkClient();
-        client.disconnect();
-
-        // Connect
-        return client.connectPico(addresses);
+        // Load network iframe and autoconnect
+        await this._getNetworkClient();
     }
 
     // Uint8Arrays cannot be stored in SessionStorage, thus the stored request has arrays instead and is
