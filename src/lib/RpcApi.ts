@@ -82,9 +82,15 @@ export default class RpcApi {
         this._keyguardClient.init().catch(console.error); // TODO: Provide better error handling here
         if (this._store.state.keyguardResult) return;
 
-        // If there is no valid request, show an error page
+        // If there is no request:
+        // If no opener is set and there is a previous history entry and there is no data passed in the URL,
+        // redirect to Safe. Otherwise, show error page.
         const onClientTimeout = () => {
-            this._router.replace(`/${REQUEST_ERROR}`);
+            if (window.opener === null && window.history.length > 1 && !window.location.hash) {
+                location.href = Config.redirectTarget;
+            } else {
+                this._router.replace(`/${REQUEST_ERROR}`);
+            }
         };
         this._server.init(onClientTimeout);
     }
