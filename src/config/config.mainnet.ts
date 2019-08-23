@@ -8,5 +8,6 @@ export default {
         'https://safe.nimiq.com',
         'https://hub.nimiq.com', // To allow CashlinkReceive to trigger signup/login/onboard
     ],
+    redirectTarget: 'https://safe.nimiq.com',
     reportToSentry: true,
 };
