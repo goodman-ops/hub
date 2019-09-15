@@ -1,16 +1,15 @@
 import CurrencyCode from 'currency-codes';
+import { isMilliseconds } from './Constants';
 import {
     RequestType,
     PaymentOptions,
     Currency,
     PaymentMethod,
     MultiCurrencyCheckoutRequest,
-    AvailablePaymentOptions,
 } from './PublicRequestTypes';
 import {
     ParsedNimiqDirectPaymentOptions,
     ExtendedNimiqDirectPaymentOptions,
-    NimiqDirectPaymentOptions,
  } from './paymentOptions/NimiqPaymentOptions';
 import {
     ParsedEtherDirectPaymentOptions,
@@ -63,7 +62,9 @@ export abstract class ParsedPaymentOptions<C extends Currency, T extends Payment
     public expires: number;
 
     public constructor(option: PaymentOptions<C, T>) {
-        this.expires = option.expires;
+        this.expires = isMilliseconds(option.expires)
+            ? option.expires
+            : option.expires * 1000;
     }
 
     public abstract update(option: PaymentOptions<C, T>): void;
