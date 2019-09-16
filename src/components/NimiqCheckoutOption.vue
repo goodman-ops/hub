@@ -36,8 +36,14 @@
                 :endTime="paymentOptions.expires" />
         </template>
         <template v-if="wallets.length === 0">
-            <h2 class="nq-h1">With Nimiq, it gets better</h2>
-            <!-- TODO -->
+            <h2 class="nq-h1">Imagine if paying with<br/>crypto was easy</h2>
+            <PageBody>
+                <!-- TODO -->
+            </PageBody>
+            <PageFooter>
+                <button class="nq-button-s nq-light-blue-bg" @click="goToOnboarding">Login</button>
+                <a href="javascript:void(0);" class="nq-link nq-light-blue" @click="goToOnboarding">Try it now</a>
+            </PageFooter>
         </template>
         <template v-else>
             <h2 class="nq-h1">Choose an Address to pay</h2>
@@ -63,7 +69,14 @@ import { Component, Vue } from 'vue-property-decorator';
 import { State, Mutation, Getter } from 'vuex-class';
 import KeyguardClient from '@nimiq/keyguard-client';
 import { State as RpcState } from '@nimiq/rpc';
-import { AccountSelector, PaymentInfoLine, SmallPage, TransferIcon } from '@nimiq/vue-components';
+import {
+    AccountSelector,
+    PageBody,
+    PageFooter,
+    PaymentInfoLine,
+    SmallPage,
+    TransferIcon,
+} from '@nimiq/vue-components';
 import { AccountInfo } from '../lib/AccountInfo';
 import {
     TX_VALIDITY_WINDOW,
@@ -87,6 +100,8 @@ import CurrencyInfo from './CurrencyInfo.vue';
     AccountSelector,
     CurrencyInfo,
     Network,
+    PageBody,
+    PageFooter,
     SmallPage,
     StatusScreen,
     PaymentInfoLine,
@@ -350,6 +365,7 @@ export default class NimiqCheckoutOption
 <style scoped>
     .small-page {
         position: relative;
+        width: 52.5rem;
     }
 
     .status-screen {
@@ -389,5 +405,11 @@ export default class NimiqCheckoutOption
     .non-sufficient-balance .nq-icon {
         font-size: 2.25rem;
         vertical-align: text-bottom;
+    }
+
+    .page-footer {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 3rem;
     }
 </style>
