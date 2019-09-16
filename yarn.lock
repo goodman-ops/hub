@@ -786,7 +786,7 @@
 
 "@nimiq/vue-components@https://github.com/nimiq/vue-components.git#sebastian/build/checkout/hub":
   version "0.1.0"
-  resolved "https://github.com/nimiq/vue-components.git#e9beb7d95a58459edbc7344ce9d532ccaf5118ae"
+  resolved "https://github.com/nimiq/vue-components.git#ab7490de552dd7a6c7a336bff2997e6089ae30e4"
   dependencies:
     "@nimiq/style" "^0.7.5"
     big-integer "^1.6.44"
