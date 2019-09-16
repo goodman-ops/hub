@@ -1,6 +1,5 @@
 import { State, PostMessageRpcClient } from '@nimiq/rpc';
 import HubApi from '../client/HubApi';
-import { RequestType } from '../src/lib/RequestTypes';
 import {
     SimpleRequest,
     Account,
@@ -12,6 +11,7 @@ import {
     ExportRequest,
     Cashlink,
     RpcResult,
+    RequestType,
 } from '../src/lib/PublicRequestTypes';
 import { PopupRequestBehavior, RedirectRequestBehavior } from '../client/RequestBehavior';
 import { Utf8Tools } from '@nimiq/utils';
@@ -99,6 +99,10 @@ class Demo {
             await checkoutPopup(await generateCheckoutRequest(true));
         });
 
+        document.querySelector('button#multi-checkout').addEventListener('click', async () => {
+            await checkoutPopup(await generateMultiCheckoutRequest());
+        });
+
         document.querySelector('button#choose-address').addEventListener('click', async () => {
             try {
                 const result = await demo.client.chooseAddress({ appName: 'Accounts Demos' });
@@ -183,7 +187,7 @@ class Demo {
             const txFee = parseInt((document.querySelector('#fee') as HTMLInputElement).value) || 0;
             const txData = (document.querySelector('#data') as HTMLInputElement).value || '';
 
-            let sender: string | undefined = undefined;
+            let sender: string | undefined;
             if (useSelectedAddress) {
                 const $radio = document.querySelector('input[type="radio"]:checked');
                 if (!$radio) {
@@ -202,7 +206,53 @@ class Demo {
                 recipient: 'NQ63 U7XG 1YYE D6FA SXGG 3F5H X403 NBKN JLDU',
                 value,
                 fee: txFee,
-                extraData: Utf8Tools.stringToUtf8ByteArray(txData)
+                extraData: Utf8Tools.stringToUtf8ByteArray(txData),
+            };
+        }
+
+        async function generateMultiCheckoutRequest(): Promise<CheckoutRequest> {
+            const now =  + new Date();
+            return {
+                version: 2,
+                appName: 'Accounts Demos',
+                shopLogoUrl: `${location.origin}/nimiq.png`,
+                callbackUrl: `${location.origin}/callback.html`,
+                time: now,
+                extraData: 'Test MultiCheckout',
+                fiatCurrency: 'EUR',
+                fiatAmount: 24.99,
+                paymentOptions: [
+                    {
+                        currency: HubApi.Currency.BTC,
+                        type: HubApi.PaymentMethod.DIRECT,
+                        amount: '290000',
+                        expires: + new Date(now + 15 * 60000), // 15 minutes
+                        protocolSpecific: {
+                            fee: 270,
+                            recipient: 'dsadasdfasfasfaassdddasaa',
+                        },
+                    },
+                    {
+                        currency: HubApi.Currency.NIM,
+                        type: HubApi.PaymentMethod.DIRECT,
+                        amount: '2000000000',
+                        expires: + new Date(now + 15 * 60000), // 15 minutes
+                        protocolSpecific: {
+                            fee: 50000,
+                        },
+                    },
+                    {
+                        currency: HubApi.Currency.ETH,
+                        type: HubApi.PaymentMethod.DIRECT,
+                        amount: '910000',
+                        expires: + new Date(now + 15 * 60000), // 15 minutes
+                        protocolSpecific: {
+                            gasLimit: 5,
+                            gasPrice: '10000',
+                            recipient: 'dsadasdfasfasfaassdddasaa',
+                        },
+                    },
+                ],
             };
         }
 

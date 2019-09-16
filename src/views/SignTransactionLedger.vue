@@ -93,10 +93,11 @@ import {
     ParsedCashlinkRequest,
     ParsedCheckoutRequest,
     ParsedSignTransactionRequest,
-    RequestType,
 } from '../lib/RequestTypes';
+import { Currency, RequestType } from '../lib/PublicRequestTypes';
 import { WalletInfo } from '../lib/WalletInfo';
 import { CASHLINK_FUNDING_DATA, ERROR_CANCELED, TX_VALIDITY_WINDOW } from '../lib/Constants';
+import { ParsedNimiqDirectPaymentOptions } from '../lib/paymentOptions/NimiqPaymentOptions';
 import { Utf8Tools } from '@nimiq/utils';
 import Config from 'config';
 import Cashlink from '../lib/Cashlink';
@@ -161,8 +162,19 @@ export default class SignTransactionLedger extends Vue {
 
             senderUserFriendlyAddress = this.$store.state.activeUserFriendlyAddress;
 
+            /*
+             * There has to be a NIM paymentOption so find will always return a result.
+             */
+            const recipient = (this.request as ParsedSignTransactionRequest).recipient
+                || ((this.request as ParsedCheckoutRequest).paymentOptions.find(
+                        (option) => option.currency === Currency.NIM,
+                    ) as ParsedNimiqDirectPaymentOptions).protocolSpecific.recipient;
+            if (!recipient) {
+                this.$rpc.reject(new Error('recipient not found/fetched'));
+                return;
+            }
             this.recipientDetails = {
-                address: checkoutRequest.recipient.toUserFriendlyAddress(),
+                address: recipient.toUserFriendlyAddress(),
                 label: this.rpcState.origin.split('://')[1],
                 image: checkoutRequest.shopLogoUrl,
             };
@@ -213,12 +225,18 @@ export default class SignTransactionLedger extends Vue {
             ({ recipient, value, fee, validityStartHeight, data, flags } = signTransactionRequest);
         } else if (this.request.kind === RequestType.CHECKOUT) {
             const checkoutRequest = this.request as ParsedCheckoutRequest;
-            ({ recipient, value, fee, data, flags } = checkoutRequest);
+            // Once currency selection is implemented likely no longer needed
+            const nimiqPaymentOption = (checkoutRequest.paymentOptions.find(
+                    (option) => option.currency === Currency.NIM,
+                ) as ParsedNimiqDirectPaymentOptions);
+            value = nimiqPaymentOption.amount;
+            data = checkoutRequest.data;
+            ({ recipient, fee, flags } = nimiqPaymentOption.protocolSpecific);
             const blockchainHeight = await network.getBlockchainHeight(); // usually instant as synced in checkout
             // The next block is the earliest for which tx are accepted by standard miners
             validityStartHeight = blockchainHeight + 1
                 - TX_VALIDITY_WINDOW
-                + checkoutRequest.validityDuration;
+                + nimiqPaymentOption.protocolSpecific.validityDuration!;
         } else if (this.request.kind === RequestType.CASHLINK) {
             if (!this.cashlink) {
                 // already handled in created
@@ -243,7 +261,7 @@ export default class SignTransactionLedger extends Vue {
             signedTransaction = await LedgerApi.signTransaction({
                 sender: (senderContract || signer).address,
                 senderType: senderContract ? senderContract.type : Nimiq.Account.Type.BASIC,
-                recipient,
+                recipient: recipient!, // TODO actually needs to check that recipient is not undefined
                 value,
                 fee: fee || 0,
                 validityStartHeight,
@@ -301,8 +319,12 @@ export default class SignTransactionLedger extends Vue {
             return null;
         }
 
+        const flags = (this.request as ParsedSignTransactionRequest).flags
+            || ((this.request as ParsedCheckoutRequest).paymentOptions.find(
+                (option) => option.currency === Currency.NIM,
+            ) as ParsedNimiqDirectPaymentOptions).protocolSpecific.flags;
         // tslint:disable-next-line no-bitwise
-        if ((request.flags & Nimiq.Transaction.Flag.CONTRACT_CREATION) > 0) {
+        if ((flags & Nimiq.Transaction.Flag.CONTRACT_CREATION) > 0) {
             // TODO: Decode contract creation transactions
             // return ...
         }

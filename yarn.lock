@@ -765,6 +765,11 @@
   resolved "https://registry.yarnpkg.com/@nimiq/rpc/-/rpc-0.3.0.tgz#654c05acccc193b7d79fb09b2faf2114945ff872"
   integrity sha512-je7fv+wP4nLEgTcZwu3FaGre22qkZ9AYGbStglVaJAxOH+3CvDnnOIa9IjGFaCEhtRQKRaQEvFqa5vN4IVnH+Q==
 
+"@nimiq/rpc@^0.4.0-beta.1":
+  version "0.4.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@nimiq/rpc/-/rpc-0.4.0-beta.1.tgz#1634fd9ec7651553d0b5c43de495e435036b1552"
+  integrity sha512-Erbn0stUmHlsA/Yhw96Q2FgQsXi0ID1GkcbAHWUtkxvDjr0ZCacR3+y097JPR5jrPc4MMYrFg88lOg5gTxPing==
+
 "@nimiq/style@^0.7.5":
   version "0.7.5"
   resolved "https://registry.yarnpkg.com/@nimiq/style/-/style-0.7.5.tgz#a31904b515ee5ae17a50d1d191e8a971c63ad716"
@@ -775,11 +780,12 @@
   resolved "https://registry.yarnpkg.com/@nimiq/utils/-/utils-0.4.1.tgz#19b77441440d1fd8463315b2a98ffad23eeddb95"
   integrity sha512-Zl/QfOA7/5EApkEAG7Di8sS/6jlvNhtX462iWot9RiC7tVeaeMk+5Q7WlT5g7dVXSCNyz5IFRYewFP5PlIojgw==
 
-"@nimiq/vue-components@https://github.com/nimiq/vue-components.git#sebastian/build/accounts":
+"@nimiq/vue-components@https://github.com/nimiq/vue-components.git#daniel/build/hub/cashlinks+checkout":
   version "0.1.0"
-  resolved "https://github.com/nimiq/vue-components.git#43b1485b1f3905fe0ef40bd10d6ff4c9c8eded93"
+  resolved "https://github.com/nimiq/vue-components.git#7ddf10afb6e6ed5bb9624a28c91a0ac968598560"
   dependencies:
     "@nimiq/style" "^0.7.5"
+    big-integer "^1.6.44"
     input-format "^0.2.4"
     qr-code "github:nimiq/qr-encoder"
     qr-scanner "^1.1.1"
@@ -1806,6 +1812,11 @@ bfj@^6.1.1:
     check-types "^7.3.0"
     hoopy "^0.1.2"
     tryer "^1.0.0"
+
+big-integer@^1.6.44:
+  version "1.6.44"
+  resolved "https://registry.yarnpkg.com/big-integer/-/big-integer-1.6.44.tgz#4ee9ae5f5839fc11ade338fea216b4513454a539"
+  integrity sha512-7MzElZPTyJ2fNvBkPxtFQ2fWIkVmuzw41+BZHSzpEq3ymB2MfeKp1+yXl/tS75xCx+WnyV+yb0kp+K1C3UNwmQ==
 
 big.js@^3.1.3:
   version "3.2.0"
@@ -2867,6 +2878,14 @@ cssstyle@^1.0.0:
   dependencies:
     cssom "0.3.x"
 
+currency-codes@^1.5.0:
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/currency-codes/-/currency-codes-1.5.0.tgz#c98206903d8ec6178c4b57287273eb6d8e7b9624"
+  integrity sha512-S0703ftUp2/NR+BKZ51cfWtuzEIzGlrZm5cphUekJGp6B6x+vSWBS2w9dd1i8jqX8YwEzVrYxKlH0nST5EArnw==
+  dependencies:
+    first-match "~0.0.1"
+    nub "~0.0.0"
+
 cyclist@~0.2.2:
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/cyclist/-/cyclist-0.2.2.tgz#1b33792e11e914a2fd6d6ed6447464444e5fa640"
@@ -3777,6 +3796,11 @@ find-up@^3.0.0:
   resolved "https://registry.yarnpkg.com/find-up/-/find-up-3.0.0.tgz#49169f1d7993430646da61ecc5ae355c21c97b73"
   dependencies:
     locate-path "^3.0.0"
+
+first-match@~0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/first-match/-/first-match-0.0.1.tgz#a60ec642700f0f437234ebb7ec3f382476e542fd"
+  integrity sha1-pg7GQnAPD0NyNOu37D84JHblQv0=
 
 flush-write-stream@^1.0.0:
   version "1.0.3"
@@ -6562,6 +6586,11 @@ nth-check@^1.0.2, nth-check@~1.0.1:
   resolved "https://registry.yarnpkg.com/nth-check/-/nth-check-1.0.2.tgz#b2bd295c37e3dd58a3bf0700376663ba4d9cf05c"
   dependencies:
     boolbase "~1.0.0"
+
+nub@~0.0.0:
+  version "0.0.0"
+  resolved "https://registry.yarnpkg.com/nub/-/nub-0.0.0.tgz#b369bd32bdde66af59605c3b0520bc219dccc04f"
+  integrity sha1-s2m9Mr3eZq9ZYFw7BSC8IZ3MwE8=
 
 num2fraction@^1.2.2:
   version "1.2.2"

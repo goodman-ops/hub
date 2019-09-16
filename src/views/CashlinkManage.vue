@@ -57,7 +57,8 @@
 <script lang="ts">
 import { Component, Vue, Watch } from 'vue-property-decorator';
 import staticStore, { Static } from '../lib/StaticStore';
-import { ParsedCashlinkRequest, RequestType } from '../lib/RequestTypes';
+import { ParsedCashlinkRequest } from '../lib/RequestTypes';
+import { RequestType } from '../lib/PublicRequestTypes';
 import { SmallPage, PageBody, PageFooter, Account, CheckmarkSmallIcon, Copyable } from '@nimiq/vue-components';
 import StatusScreen from '../components/StatusScreen.vue';
 import { NetworkClient } from '@nimiq/network-client';

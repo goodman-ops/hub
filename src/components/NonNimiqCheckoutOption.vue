@@ -1,0 +1,382 @@
+<template>
+    <div class="payment-option" :id="paymentOptions.currency">
+        <CurrencyInfo
+            :currency="paymentOptions.currency"
+            :fiatCurrency="request.fiatCurrency"
+            :fiatFeeAmount="paymentOptions.fiatFee(request.fiatAmount, request.fiatCurrency)"
+            :currencyIcon="icon"/>
+
+        <SmallPage>
+            <StatusScreen
+                :title="title"
+                :state="state"
+                :status="status"
+                v-if="showStatusScreen"
+                :message="message"
+                @main-action="() => this.backToShop()"
+                mainAction="Go back to shop"/>
+            <PaymentInfoLine v-if="rpcState"
+                ref="info"
+                :cryptoAmount="{
+                    amount: paymentOptions.total,
+                    currency: paymentOptions.currency,
+                    digits: paymentOptions.digits,
+                }"
+                :fiatAmount="request.fiatAmount && request.fiatCurrency ? {
+                    amount: request.fiatAmount * 10 ** request.fiatCurrency.digits,
+                    currency: request.fiatCurrency.code,
+                    digits: request.fiatCurrency.digits,
+                } : null"
+                :address="paymentOptions.protocolSpecific.recipient"
+                :origin="rpcState.origin"
+                :shopLogoUrl="request.shopLogoUrl"
+                :startTime="request.time"
+                :endTime="paymentOptions.expires" />
+            <h2 class="nq-h1" v-if="this.selected">
+                Send your transaction
+            </h2>
+            <PageBody v-if="!this.selected">
+                <Account layout="column"
+                    :image="request.shopLogoUrl"
+                    :label="rpcState.origin.split('://')[1]"/>
+                <div class="amounts">
+                    <UniversalAmount class="crypto nq-light-blue"
+                        :decimals="paymentOptions.digits"
+                        :minDecimals="paymentOptions.minDecimals"
+                        :maxDecimals="paymentOptions.digits < 8 ? paymentOptions.digits : 8"
+                        :currency="paymentOptions.currency"
+                        :amount="paymentOptions.total"/>
+                    <UniversalAmount class="fiat"
+                        :decimals="request.fiatCurrency.digits"
+                        :minDecimals="request.fiatCurrency.digits"
+                        :maxDecimals="request.fiatCurrency.digits"
+                        :currency="request.fiatCurrency.code"
+                        :amount="request.fiatAmount * 10 ** request.fiatCurrency.digits"/>
+                </div>
+            </PageBody>
+            <PageBody v-else>
+                <div class="qr-code">
+                </div>
+                <div class="copyable-payment-information">
+                    <Copyable :text="paymentOptions.displayableAmount">
+                        <UniversalAmount class="nq-link payment-link"
+                            :decimals="paymentOptions.currency === Currency.BTC ? 8 : 18"
+                            :minDecimals="paymentOptions.currency === Currency.BTC ? 8 : 18"
+                            :maxDecimals="paymentOptions.currency === Currency.BTC ? 8 : 18"
+                            :currency="paymentOptions.currency"
+                            :amount="paymentOptions.total" />
+                        <!--a class="nq-link payment-link">{{paymentOptions.total}} {{paymentOptions.currency}}</a-->
+                    </Copyable>
+                    <Copyable>
+                        <a class="nq-link payment-link">{{paymentOptions.protocolSpecific.recipient}}</a>
+                    </Copyable>
+                </div>
+            </PageBody>
+            <PageFooter v-if="selected">
+                <a class="nq-button light-blue" :href="paymentOptions.paymentLink">Use app</a>
+                <p class="nq-text-s"><AlertTriangleIcon/>Don’t close this window until confirmation</p>
+            </PageFooter>
+            <PageFooter v-else>
+                <button class="nq-button light-blue" @click="selectCurrency">Pay with {{paymentOptions.currency}}</button>
+            </PageFooter>
+        </SmallPage>
+    </div>
+</template>
+
+<script lang="ts">
+import { Component } from 'vue-property-decorator';
+import {
+    Account,
+    AlertTriangleIcon,
+    Copyable,
+    PageBody,
+    PageFooter,
+    PaymentInfoLine,
+    SmallPage,
+    UniversalAmount,
+} from '@nimiq/vue-components';
+import QrCode from 'qr-code';
+import { AvailablePaymentOptions, Currency } from '../lib/PublicRequestTypes';
+import { AvailableParsedPaymentOptions } from '../lib/RequestTypes';
+import CheckoutOption from './CheckoutOption.vue';
+import CurrencyInfo from './CurrencyInfo.vue';
+import StatusScreen from './StatusScreen.vue';
+
+@Component({components: {
+    Account,
+    AlertTriangleIcon,
+    Copyable,
+    CurrencyInfo,
+    PageBody,
+    PageFooter,
+    PaymentInfoLine,
+    SmallPage,
+    StatusScreen,
+    UniversalAmount,
+}})
+export default class NonNimiqCheckoutOption<
+    Parsed extends AvailableParsedPaymentOptions
+> extends CheckoutOption<Parsed> {
+    protected selected: boolean = false;
+
+    private checkNetworkInterval: number | null = null;
+
+    public mounted() {
+        if (this.paymentOptions.expires) {
+            this.fetchTime().then((referenceTime) => {
+                if (referenceTime) {
+                    if (this.$refs.info) {
+                        (this.$refs.info as PaymentInfoLine).setTime(referenceTime);
+                    }
+                    this.setupTimeout(referenceTime);
+                }
+            });
+        }
+    }
+
+    public data() {
+        return {
+            Currency,
+        };
+    }
+
+    protected async selectCurrency() {
+        this.selected = true;
+        if (this.request.callbackUrl) {
+            this.showStatusScreen = true;
+            await this.fetchPaymentOption();
+        }
+        let element: HTMLElement | null = document.getElementById(this.paymentOptions.currency!);
+        if (element) {
+            element = element.querySelector('.qr-code');
+        }
+        if (!element) {
+            throw new Error(`An Element #${this.paymentOptions.currency} .qr-code must exist`);
+        }
+
+        this.$emit('chosen', this.paymentOptions.currency);
+
+        this.$nextTick(() =>
+                QrCode.render({
+                    text: this.paymentOptions.paymentLink,
+                    radius: 0.5, // 0.0 to 0.5
+                    ecLevel: 'H', // L, M, Q, H
+                    fill: '#1F2348', // foreground color
+                    background: null, // color or null for transparent
+                    size: 200, // in pixels
+                },
+                element!,
+            ),
+        );
+
+        this.checkNetworkInterval = window.setInterval(async () => {
+            const data = new FormData();
+            data.append('currency', this.paymentOptions.currency);
+            data.append('command', 'check_network');
+            const fetchedData = await this.fetchData(data);
+
+            if (fetchedData.transaction_found === true) {
+                window.clearInterval(this.checkNetworkInterval!);
+                if (this.optionTimeout) {
+                    window.clearTimeout(this.optionTimeout);
+                }
+                return this.showSuccessScreen();
+            }
+            if (this.timeoutReached) {
+                window.clearInterval(this.checkNetworkInterval!);
+                this.timedOut();
+            }
+        }, 10000);
+    }
+
+    protected checkBlur() {
+        // see if window gets blurred as an indicator for an opened wallet app.
+    }
+
+    protected showSuccessScreen() {
+        this.title = 'Payment successful';
+        this.showStatusScreen = true;
+        this.$nextTick(() => this.state = StatusScreen.State.SUCCESS);
+        window.setTimeout(() => this.$rpc.resolve({success: true}),  StatusScreen.SUCCESS_REDIRECT_DELAY);
+    }
+}
+</script>
+
+<style scoped>
+    .status-screen {
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+
+    .currency-info h1 {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0;
+    }
+
+    .currency-info img,
+    .currency-info .nq-icon {
+        width: 4.5rem;
+        height: 4.5rem;
+        margin-right: 2rem;
+    }
+
+    .payment-option .page-body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-around;
+    }
+
+    .payment-option:not(.confirmed) h2,
+    .payment-option:not(.confirmed) a.payment-link.blurred,
+    .payment-option:not(.confirmed) .copyable-payment-information {
+        filter: blur(1.5rem);
+        opacity: .1;
+        transition: filte .5s ease, opacity .5s ease;
+    }
+
+    .payment-option:not(.confirmed) .info-line >>> .amounts,
+    .payment-option:not(.confirmed) .info-line >>> .arrow-runway,
+    .payment-option:not(.confirmed) .info-line >>> .description .account {
+        opacity: 0;
+        transition: opacity .5s ease;
+    }
+
+    .payment-option .page-body {
+        width: 52.5rem;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .payment-option .account >>> .identicon-and-label .identicon {
+        width: 21rem;
+        height: 21rem;
+    }
+
+    .payment-option .account >>> .identicon-and-label .label {
+        font-weight: 600;
+        font-size: 3.5rem;
+        line-height: 3.5rem;
+        margin-top: 2.75rem;
+        margin-bottom: 3rem;
+    }
+
+    .payment-option .amounts {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        width: 100%;
+        align-items: center;
+        border-top: 0.125rem solid rgba(31, 35, 72, 0.1); /* based on nq-dark-blue */
+    }
+
+    .payment-option .amounts .crypto {
+        margin-top: 3.5rem;
+        font-weight: 600;
+        font-size: 5rem;
+        line-height: 5rem;
+    }
+
+    .payment-option .amounts .fiat {
+        margin-top: 1.75rem;
+        font-size: 2rem;
+        line-height: 2.75rem;
+    }
+
+    .payment-option.confirmed .page-body {
+        justify-content: flex-end;
+        padding-bottom: 1rem;
+    }
+
+    .payment-option .page-body .payment-link {
+        word-break: break-all;
+        text-align: center;
+        background: none;
+    }
+
+    .payment-option:not(.confirmed) .page-body .payment-link {
+        background: var(--nimiq-blue-bg);
+        transition: background 5s ease, color 5s ease;
+        color: transparent;
+        border-radius: 1.5rem;
+        width: 100%;
+    }
+
+    .copyable-payment-information {
+        margin-top: 2rem;
+        width: 100%;
+    }
+
+    .copyable-payment-information >>> .copyable {
+        margin-bottom: 0;
+        padding: 1rem;
+        width: 100%;
+        text-align: center;
+        pointer-events: none;
+    }
+
+    .page-footer a.nq-button {
+        line-height: 7.5rem;
+        margin: 2rem 4.75rem 2rem;
+    }
+
+    .page-footer a.nq-button + p.nq-text-s {
+        align-self: center;
+        color:  rgba(31, 35, 72, 0.5);
+        align-content: center;
+        margin: 0 0 1rem;
+        display: flex;
+    }
+
+    .page-footer a.nq-button + p.nq-text-s > svg {
+        margin-right: 1rem;
+    }
+
+    /* todo */
+    .confirmed .copyable-payment-information >>> .copyable {
+        border: 1px solid rgba(31, 35, 72, 0.1);
+        pointer-events: all;
+    }
+
+    .copyable-payment-information >>> .copyable + .copyable {
+        border-top: 0;
+    }
+
+    .copyable-payment-information >>> .copyable:first-of-type {
+        border-radius: .5rem .5rem 0 0;
+    }
+
+    .copyable-payment-information >>> .copyable:last-of-type {
+        border-radius: 0 0 .5rem .5rem;
+    }
+
+    .copyable-payment-information >>> .copyable.copied:after,
+    .copyable-payment-information >>> .copyable:before,
+    .copyable-payment-information.copied >>> .copyable:before {
+        content: "";
+    }
+
+    .copyable-payment-information >>> .copyable:hover:before {
+        padding: 0;
+        opacity: .5;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 35 40'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M34.07 6.01L28.95.92c-.6-.59-1.4-.92-2.24-.92H12.33a3.17 3.17 0 0 0-3.16 3.17v5.16h-6A3.17 3.17 0 0 0 0 11.5v25.35A3.17 3.17 0 0 0 3.17 40h19.5a3.17 3.17 0 0 0 3.16-3.16v-5.17h6A3.17 3.17 0 0 0 35 28.5V8.25c0-.84-.33-1.65-.93-2.24zM22.5 35.83c0 .46-.37.84-.83.84H4.17a.83.83 0 0 1-.84-.84V12.5c0-.46.38-.83.84-.83h12.97c.22 0 .43.08.58.23l4.53 4.43c.16.16.25.37.25.6v18.9zm3.75-7.5h4.58c.46 0 .84-.37.84-.83V8.6a.83.83 0 0 0-.25-.6l-4.58-4.47a.83.83 0 0 0-.58-.24l-12.93.04a.83.83 0 0 0-.83.84v3.75c0 .23.19.41.42.41h4.63c.84 0 1.64.33 2.23.93l5.12 5.09c.6.59.93 1.4.93 2.23v11.34c0 .23.19.41.42.41z' fill='currentColor'/%3E%3C/svg%3E");
+        left: 1.5rem;
+        top: calc(50% - 1rem);
+        width: 1.75rem;
+        height: 2rem;
+        transition: ease-out;
+    }
+
+    .copyable-payment-information >>> .copyable.copied:before {
+        padding: 0;
+        opacity: 1;
+
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 35 40'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M34.07 6.01L28.95.92c-.6-.59-1.4-.92-2.24-.92H12.33a3.17 3.17 0 0 0-3.16 3.17v5.16h-6A3.17 3.17 0 0 0 0 11.5v25.35A3.17 3.17 0 0 0 3.17 40h19.5a3.17 3.17 0 0 0 3.16-3.16v-5.17h6A3.17 3.17 0 0 0 35 28.5V8.25c0-.84-.33-1.65-.93-2.24zM22.5 35.83c0 .46-.37.84-.83.84H4.17a.83.83 0 0 1-.84-.84V12.5c0-.46.38-.83.84-.83h12.97c.22 0 .43.08.58.23l4.53 4.43c.16.16.25.37.25.6v18.9zm3.75-7.5h4.58c.46 0 .84-.37.84-.83V8.6a.83.83 0 0 0-.25-.6l-4.58-4.47a.83.83 0 0 0-.58-.24l-12.93.04a.83.83 0 0 0-.83.84v3.75c0 .23.19.41.42.41h4.63c.84 0 1.64.33 2.23.93l5.12 5.09c.6.59.93 1.4.93 2.23v11.34c0 .23.19.41.42.41z' fill='currentColor'/%3E%3C/svg%3E");
+        left: 1.5rem;
+        top: calc(50% - 1rem);
+        width: 1.75rem;
+        height: 2rem;
+    }
+</style>

@@ -6,8 +6,8 @@ import {
     BehaviorType,
 } from './RequestBehavior';
 import { RedirectRpcClient } from '@nimiq/rpc';
-import { RequestType } from '../src/lib/RequestTypes';
 import {
+    RequestType,
     BasicRequest,
     SimpleRequest,
     OnboardRequest,
@@ -25,11 +25,15 @@ import {
     SignedMessage,
     CashlinkRequest,
     Cashlink,
+    Currency,
+    PaymentMethod,
 } from '../src/lib/PublicRequestTypes';
 
 export default class HubApi<DB extends BehaviorType = BehaviorType.POPUP> { // DB: Default Behavior
     public static readonly RequestType = RequestType;
     public static readonly RedirectRequestBehavior = RedirectRequestBehavior;
+    public static readonly Currency = Currency;
+    public static readonly PaymentMethod = PaymentMethod;
     public static readonly MSG_PREFIX = '\x16Nimiq Signed Message:\n';
 
     private static get DEFAULT_ENDPOINT() {
@@ -95,7 +99,7 @@ export default class HubApi<DB extends BehaviorType = BehaviorType.POPUP> { // D
     public checkout<B extends BehaviorType = DB>(
         request: CheckoutRequest,
         requestBehavior: RequestBehavior<B> = this._defaultBehavior as any,
-    ): Promise<B extends BehaviorType.REDIRECT ? void : SignedTransaction> {
+    ): Promise<B extends BehaviorType.REDIRECT ? void : SignedTransaction | SimpleResult> {
         return this._request(requestBehavior, RequestType.CHECKOUT, [request]);
     }
 
