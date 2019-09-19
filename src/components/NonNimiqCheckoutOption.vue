@@ -58,11 +58,11 @@
                 <div class="qr-code">
                 </div>
                 <div class="copyable-payment-information">
-                    <Copyable>
+                    <Copyable :text="paymentOptions.baseUnitAmount">
                         <UniversalAmount class="nq-link payment-link"
-                            :decimals="paymentOptions.currency === Currency.BTC ? 8 : 18"
-                            :minDecimals="paymentOptions.currency === Currency.BTC ? 8 : 18"
-                            :maxDecimals="paymentOptions.currency === Currency.BTC ? 8 : 18"
+                            :decimals="paymentOptions.digits"
+                            :minDecimals="paymentOptions.digits"
+                            :maxDecimals="paymentOptions.digits"
                             :currency="paymentOptions.currency"
                             :amount="paymentOptions.amount" />
                         <!--a class="nq-link payment-link">{{paymentOptions.total}} {{paymentOptions.currency}}</a-->

@@ -20,7 +20,7 @@
         "@nimiq/network-client": "link:../nimiq.github.io/libraries/network/client",
         "@nimiq/rpc": "^0.4.0-beta.1",
         "@nimiq/style": "^0.7.5",
-        "@nimiq/utils": "^0.4.1",
+        "@nimiq/utils": "link:../nimiq.github.io/libraries/nimiq-utils",
         "@nimiq/vue-components": "https://github.com/nimiq/vue-components.git#daniel/build/hub/cashlinks+checkout",
         "big-integer": "^1.6.44",
         "currency-codes": "^1.5.0",
