@@ -18,7 +18,7 @@
         "@nimiq/keyguard-client": "^1.0.0",
         "@nimiq/ledgerjs": "https://github.com/nimiq/ledger-api.git",
         "@nimiq/network-client": "link:../nimiq.github.io/libraries/network/client",
-        "@nimiq/rpc": "^0.4.0-beta.1",
+        "@nimiq/rpc": "^0.4.0-beta.2",
         "@nimiq/style": "^0.7.5",
         "@nimiq/utils": "link:../nimiq.github.io/libraries/nimiq-utils",
         "@nimiq/vue-components": "https://github.com/nimiq/vue-components.git#daniel/build/hub/cashlinks+checkout",
