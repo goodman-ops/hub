@@ -79,7 +79,7 @@ export abstract class ParsedPaymentOptions<C extends Currency, T extends Payment
         return moveComma(this.amount, -this.digits);
     }
 
-    public abstract update(option: PaymentOptions<C, T>): void;
+    public abstract update(options: PaymentOptions<C, T>): void;
 
     protected isNonNegativeInteger(value: string | number | bigint | BigInteger) {
         try {
@@ -93,6 +93,14 @@ export abstract class ParsedPaymentOptions<C extends Currency, T extends Payment
 export type AvailableParsedPaymentOptions = ParsedNimiqDirectPaymentOptions
                                    | ParsedEtherDirectPaymentOptions
                                    | ParsedBitcoinDirectPaymentOptions;
+
+export type ParsedPaymentOptionsForCurrencyAndType<C extends Currency, T extends PaymentMethod> =
+    T extends PaymentMethod.DIRECT ?
+        C extends Currency.NIM ? ParsedNimiqDirectPaymentOptions
+        : C extends Currency.BTC ? ParsedBitcoinDirectPaymentOptions
+        : C extends Currency.ETH ? ParsedEtherDirectPaymentOptions
+        : ParsedPaymentOptions<C, T>
+    : ParsedPaymentOptions<C, T>;
 
 export interface ParsedCheckoutRequest extends ParsedBasicRequest {
     shopLogoUrl?: string;
