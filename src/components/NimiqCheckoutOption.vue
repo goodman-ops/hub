@@ -131,10 +131,11 @@ export default class NimiqCheckoutOption
     private balancesUpdating: boolean = true;
     private height: number = 0;
 
-    protected created() {
+    protected async created() {
         if (this.paymentOptions.currency !== Currency.NIM) {
             throw new Error('NimiqCheckoutOption did not get a NimiqPaymentOption.');
         }
+        await super.created();
     }
 
     protected async mounted() {
@@ -242,20 +243,7 @@ export default class NimiqCheckoutOption
     }
 
     private async setAccountOrContract(walletId: string, address: string, isFromRequest = false) {
-        if (this.request.callbackUrl) {
-            try {
-                await this.fetchPaymentOption();
-            } catch (e) {
-                this.$rpc.reject(e);
-                return;
-            }
-        }
-        if (!this.paymentOptions.protocolSpecific.recipient) {
-            this.$rpc.reject(new Error('Failed to fetch recipient'));
-            return;
-        }
-
-        this.$emit('chosen', this.paymentOptions.currency);
+        super.selectCurrency();
 
         if (this.balancesUpdating) {
             this.showStatusScreen = true;
