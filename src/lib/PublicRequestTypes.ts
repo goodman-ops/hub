@@ -84,7 +84,7 @@ export enum Currency {
     ETH = 'eth',
 }
 
-export interface PaymentOptions<C, T> {
+export interface PaymentOptions<C extends Currency, T extends PaymentMethod> {
     type: T;
     currency: C;
     expires: number;
@@ -98,6 +98,14 @@ export interface PaymentOptions<C, T> {
 export type AvailablePaymentOptions = NimiqDirectPaymentOptions
                              | EtherDirectPaymentOptions
                              | BitcoinDirectPaymentOptions;
+
+export type PaymentOptionsForCurrencyAndType<C extends Currency, T extends PaymentMethod> =
+    T extends PaymentMethod.DIRECT ?
+        C extends Currency.NIM ? NimiqDirectPaymentOptions
+        : C extends Currency.BTC ? BitcoinDirectPaymentOptions
+        : C extends Currency.ETH ? EtherDirectPaymentOptions
+        : PaymentOptions<C, T>
+    : PaymentOptions<C, T>;
 
 export interface MultiCurrencyCheckoutRequest extends BasicRequest {
     version: 2;

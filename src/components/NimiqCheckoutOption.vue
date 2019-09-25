@@ -125,23 +125,14 @@ export default class NimiqCheckoutOption
     private balancesUpdating: boolean = true;
     private height: number = 0;
 
-    private created() {
+    protected created() {
         if (this.paymentOptions.currency !== Currency.NIM) {
             throw new Error('NimiqCheckoutOption did not get a NimiqPaymentOption.');
         }
     }
 
-    private async mounted() {
-        if (this.paymentOptions.expires) {
-            this.fetchTime().then((referenceTime) => {
-                if (referenceTime) {
-                    if (this.$refs.info) {
-                        (this.$refs.info as PaymentInfoLine).setTime(referenceTime);
-                    }
-                    this.setupTimeout(referenceTime);
-                }
-            });
-        }
+    protected async mounted() {
+        super.mounted();
         // Requires Network child component to be rendered
         this.addConsensusListeners();
         this.updateBalancePromise = this.getBalances().then((balances) => {
@@ -242,8 +233,18 @@ export default class NimiqCheckoutOption
 
     private async setAccountOrContract(walletId: string, address: string, isFromRequest = false) {
         if (this.request.callbackUrl) {
-            await this.fetchPaymentOption();
+            try {
+                await this.fetchPaymentOption();
+            } catch (e) {
+                this.$rpc.reject(e);
+                return;
+            }
         }
+        if (!this.paymentOptions.protocolSpecific.recipient) {
+            this.$rpc.reject(new Error('Failed to fetch recipient'));
+            return;
+        }
+
         this.$emit('chosen', this.paymentOptions.currency);
 
         if (this.balancesUpdating) {
@@ -275,10 +276,6 @@ export default class NimiqCheckoutOption
         // proceed to transaction signing
         switch (senderAccount.type) {
             case WalletType.LEDGER:
-                if (!this.paymentOptions.protocolSpecific.recipient) {
-                    await this.fetchPaymentOption();
-                }
-                this.showStatusScreen = false;
                 this.$rpc.routerPush(`${RequestType.SIGN_TRANSACTION}-ledger`);
                 return;
             case WalletType.LEGACY:
@@ -292,9 +289,7 @@ export default class NimiqCheckoutOption
                         ? this.paymentOptions.protocolSpecific.validityDuration
                         : TX_VALIDITY_WINDOW);
 
-                if (!this.paymentOptions.protocolSpecific.recipient) {
-                    await this.fetchPaymentOption();
-                }
+                const timeOffset = await this.timeOffsetPromise;
 
                 const request: KeyguardClient.SignTransactionRequest = {
                     layout: 'checkout',
@@ -317,6 +312,11 @@ export default class NimiqCheckoutOption
                     validityStartHeight,
                     data: this.request.data,
                     flags: this.paymentOptions.protocolSpecific.flags,
+
+                    fiatAmount: this.request.fiatAmount,
+                    fiatCurrency: this.request.fiatCurrency,
+                    time: this.request.time - timeOffset, // normalize time to our local system time
+                    expires: this.paymentOptions.expires - timeOffset,
                 };
 
                 staticStore.keyguardRequest = request;

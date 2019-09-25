@@ -96,11 +96,11 @@ import {
     UniversalAmount,
 } from '@nimiq/vue-components';
 import QrCode from 'qr-code';
-import { AvailablePaymentOptions, Currency } from '../lib/PublicRequestTypes';
 import { AvailableParsedPaymentOptions } from '../lib/RequestTypes';
 import CheckoutOption from './CheckoutOption.vue';
 import CurrencyInfo from './CurrencyInfo.vue';
 import StatusScreen from './StatusScreen.vue';
+import CheckoutServerApi from '../lib/CheckoutServerApi';
 
 @Component({components: {
     Account,
@@ -121,30 +121,24 @@ export default class NonNimiqCheckoutOption<
 
     private checkNetworkInterval: number | null = null;
 
-    public mounted() {
-        if (this.paymentOptions.expires) {
-            this.fetchTime().then((referenceTime) => {
-                if (referenceTime) {
-                    if (this.$refs.info) {
-                        (this.$refs.info as PaymentInfoLine).setTime(referenceTime);
-                    }
-                    this.setupTimeout(referenceTime);
-                }
-            });
-        }
-    }
-
-    public data() {
-        return {
-            Currency,
-        };
+    protected mounted() {
+        super.mounted();
     }
 
     protected async selectCurrency() {
         this.selected = true;
         if (this.request.callbackUrl) {
             this.showStatusScreen = true;
-            await this.fetchPaymentOption();
+            try {
+                await this.fetchPaymentOption();
+            } catch (e) {
+                this.$rpc.reject(e);
+                return;
+            }
+        }
+        if (!this.paymentOptions.protocolSpecific.recipient) {
+            this.$rpc.reject(new Error('Failed to fetch recipient'));
+            return;
         }
         let element: HTMLElement | null = document.getElementById(this.paymentOptions.currency!);
         if (element) {
@@ -170,10 +164,14 @@ export default class NonNimiqCheckoutOption<
         );
 
         this.checkNetworkInterval = window.setInterval(async () => {
-            const data = new FormData();
-            data.append('currency', this.paymentOptions.currency);
-            data.append('command', 'check_network');
-            const fetchedData = await this.fetchData(data);
+            if (!this.request.callbackUrl || !this.request.csrf) return;
+            let fetchedData;
+            try {
+                fetchedData = await CheckoutServerApi.checkNetwork(this.request.callbackUrl,
+                    this.paymentOptions.currency, this.request.csrf);
+            } catch (e) {
+                return;
+            }
 
             if (fetchedData.transaction_found === true) {
                 window.clearInterval(this.checkNetworkInterval!);

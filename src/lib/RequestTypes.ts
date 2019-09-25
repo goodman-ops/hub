@@ -50,8 +50,8 @@ export interface ParsedSignTransactionRequest extends ParsedBasicRequest {
 }
 
 export interface ParsedPaymentOptions<C extends Currency, T extends PaymentMethod> {
-    currency: C;
-    type: T;
+    readonly currency: C;
+    readonly type: T;
     expires: number;
     paymentLink: string;
     raw(): PaymentOptions<C, T>;
@@ -75,12 +75,20 @@ export abstract class ParsedPaymentOptions<C extends Currency, T extends Payment
         return moveComma(this.amount, -this.digits);
     }
 
-    public abstract update(option: PaymentOptions<C, T>): void;
+    public abstract update(options: PaymentOptions<C, T>): void;
 }
 
 export type AvailableParsedPaymentOptions = ParsedNimiqDirectPaymentOptions
                                    | ParsedEtherDirectPaymentOptions
                                    | ParsedBitcoinDirectPaymentOptions;
+
+export type ParsedPaymentOptionsForCurrencyAndType<C extends Currency, T extends PaymentMethod> =
+    T extends PaymentMethod.DIRECT ?
+        C extends Currency.NIM ? ParsedNimiqDirectPaymentOptions
+        : C extends Currency.BTC ? ParsedBitcoinDirectPaymentOptions
+        : C extends Currency.ETH ? ParsedEtherDirectPaymentOptions
+        : ParsedPaymentOptions<C, T>
+    : ParsedPaymentOptions<C, T>;
 
 export interface ParsedCheckoutRequest extends ParsedBasicRequest {
     shopLogoUrl?: string;

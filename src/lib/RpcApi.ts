@@ -10,9 +10,9 @@ import {
     ParsedSimpleRequest,
 } from './RequestTypes';
 import { RequestParser } from './RequestParser';
-import { RpcRequest, RpcResult, Currency, RequestType } from './PublicRequestTypes';
+import { Currency, RequestType, RpcRequest, RpcResult } from './PublicRequestTypes';
 import { ParsedNimiqDirectPaymentOptions } from './paymentOptions/NimiqPaymentOptions';
-import { KeyguardClient, KeyguardCommand, Errors } from '@nimiq/keyguard-client';
+import { Errors as KeyguardErrors, KeyguardClient, KeyguardCommand } from '@nimiq/keyguard-client';
 import { keyguardResponseRouter, REQUEST_ERROR } from '@/router';
 import { StaticStore } from '@/lib/StaticStore';
 import { WalletStore } from './WalletStore';
@@ -116,7 +116,7 @@ export default class RpcApi {
     }
 
     public reject(error: Error) {
-        const ignoredErrorTypes = [ Errors.Types.INVALID_REQUEST.toString() ];
+        const ignoredErrorTypes = [ KeyguardErrors.Types.INVALID_REQUEST.toString() ];
         const ignoredErrors = [ ERROR_CANCELED, 'Request aborted', 'Account ID not found', 'Address not found' ];
         if (ignoredErrorTypes.indexOf(error.name) < 0 && ignoredErrors.indexOf(error.message) < 0) {
             if (Config.reportToSentry) {
@@ -321,7 +321,7 @@ export default class RpcApi {
                 // Set result
                 this._store.commit('setKeyguardResult', error);
 
-                if (error.message === ERROR_CANCELED) {
+                if (error.message === KeyguardErrors.Messages.CANCELED) {
                     this.reject(error);
                     return;
                 }
@@ -338,6 +338,13 @@ export default class RpcApi {
                     } else {
                         window.history.back();
                     }
+                    return;
+                }
+
+                if (error.message === KeyguardErrors.Messages.EXPIRED) {
+                    // Don't reject but navigate to checkout to display the expiration warning there.
+                    this._staticStore.originalRouteName = RequestType.CHECKOUT;
+                    this._reply(ResponseStatus.OK, { success: false });
                     return;
                 }
 
