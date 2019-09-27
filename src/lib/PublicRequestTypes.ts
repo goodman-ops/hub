@@ -84,13 +84,20 @@ export enum Currency {
     ETH = 'eth',
 }
 
+export enum PaymentState {
+    NOT_FOUND = 'NOT_FOUND',
+    PAID = 'PAID',
+    UNDERPAID = 'UNDERPAID',
+    OVERPAID = 'OVERPAID',
+}
+
 export interface PaymentOptions<C extends Currency, T extends PaymentMethod> {
     type: T;
     currency: C;
     expires: number;
     /**
-     * amount in the smallest unit of the currency specified in `currency`.
-     * i.e Luna for Currency.NIM and satoshi for Currency.BTC
+     * Amount in the smallest unit of the currency specified in `currency`.
+     * i.e Luna for Currency.NIM and Satoshi for Currency.BTC
      */
     amount: string;
 }
@@ -110,34 +117,35 @@ export type PaymentOptionsForCurrencyAndType<C extends Currency, T extends Payme
 export interface MultiCurrencyCheckoutRequest extends BasicRequest {
     version: 2;
     /**
-     * must be located on the same origin as the one the request is sent from
+     * Must be located on the same origin as the one the request is sent from.
      */
     shopLogoUrl: string;
     /**
-     * input is {currency, type} alongside the orde identifying parameters in the url.
+     * TODO
+     * Input is {currency, type} alongside the order identifying parameters in the url.
      * the called url must return a PaymentOptions<currency, type> object
      */
     callbackUrl?: string;
     /**
-     * the csrf token, that will be transmitted for future requests to the callback url
+     * The csrf token, that will be transmitted for future requests to the callback url
      */
     csrf?: string;
     extraData?: Uint8Array | string;
     /**
-     * current time in milliseconds
+     * Current time in milliseconds
      */
     time: number;
     /**
-     * ISO 4217 Code of the currency used on the calling site.
+     * ISO 4217 Code of the fiat currency used on the calling site.
      */
     fiatCurrency: string;
     /**
-     * value in the currency specified by `fiatCurrency`
+     * Amount in the currency specified by `fiatCurrency`
      */
     fiatAmount: number;
     /**
-     * array of available payment options.
-     * each currency can only be present once, and a Currency.NIM option must exist.
+     * Array of available payment options.
+     * Each currency can only be present once, and a Currency.NIM option must exist.
      */
     paymentOptions: AvailablePaymentOptions[];
 }

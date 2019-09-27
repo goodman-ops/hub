@@ -66,6 +66,9 @@ export abstract class ParsedPaymentOptions<C extends Currency, T extends Payment
     public expires: number;
 
     public constructor(option: PaymentOptions<C, T>) {
+        if (!option.expires) {
+            throw new Error('Each paymentOption must provide its expiration time');
+        }
         this.expires = isMilliseconds(option.expires)
             ? option.expires
             : option.expires * 1000;

@@ -39,8 +39,11 @@ export default class CurrencyInfo extends Vue {
 
     .currency-info img,
     .currency-info .nq-icon {
-        width: 4.5rem;
         height: 4.5rem;
         margin-right: 2rem;
+    }
+
+    .currency-info .nq-icon {
+        width: 4.5rem;
     }
 </style>

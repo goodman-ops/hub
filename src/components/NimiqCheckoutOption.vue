@@ -65,10 +65,9 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator';
+import { Component } from 'vue-property-decorator';
 import { State, Mutation, Getter } from 'vuex-class';
 import KeyguardClient from '@nimiq/keyguard-client';
-import { State as RpcState } from '@nimiq/rpc';
 import {
     AccountSelector,
     PageBody,
@@ -78,19 +77,13 @@ import {
     TransferIcon,
 } from '@nimiq/vue-components';
 import { AccountInfo } from '../lib/AccountInfo';
-import {
-    TX_VALIDITY_WINDOW,
-    LEGACY_GROUPING_ACCOUNT_ID,
-    LEGACY_GROUPING_ACCOUNT_LABEL,
-    ERROR_CANCELED,
-} from '../lib/Constants';
+import { TX_VALIDITY_WINDOW } from '../lib/Constants';
 import { ContractInfo, VestingContractInfo } from '../lib/ContractInfo';
-import { Account, Currency, PaymentMethod, RequestType } from '../lib/PublicRequestTypes';
-import { ParsedCheckoutRequest, Omit } from '../lib/RequestTypes';
-import staticStore, { Static } from '../lib/StaticStore';
+import { Account, Currency, RequestType } from '../lib/PublicRequestTypes';
+import staticStore from '../lib/StaticStore';
 import { WalletInfo, WalletType } from '../lib/WalletInfo';
 import { WalletStore } from '../lib/WalletStore';
-import { NimiqDirectPaymentOptions, ParsedNimiqDirectPaymentOptions } from '../lib/paymentOptions/NimiqPaymentOptions';
+import { ParsedNimiqDirectPaymentOptions } from '../lib/paymentOptions/NimiqPaymentOptions';
 import Network from './Network.vue';
 import StatusScreen from './StatusScreen.vue';
 import CheckoutOption from './CheckoutOption.vue';

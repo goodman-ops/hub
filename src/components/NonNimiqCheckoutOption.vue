@@ -59,16 +59,16 @@
                 </div>
                 <div class="copyable-payment-information">
                     <Copyable :text="paymentOptions.baseUnitAmount">
-                        <UniversalAmount class="nq-link payment-link"
+                        <UniversalAmount class="nq-link"
                             :decimals="paymentOptions.digits"
                             :minDecimals="paymentOptions.digits"
                             :maxDecimals="paymentOptions.digits"
                             :currency="paymentOptions.currency"
                             :amount="paymentOptions.amount" />
-                        <!--a class="nq-link payment-link">{{paymentOptions.total}} {{paymentOptions.currency}}</a-->
+                        <!--a class="nq-link">{{paymentOptions.total}} {{paymentOptions.currency}}</a-->
                     </Copyable>
                     <Copyable>
-                        <a class="nq-link payment-link">{{paymentOptions.protocolSpecific.recipient}}</a>
+                        <a class="nq-link">{{paymentOptions.protocolSpecific.recipient}}</a>
                     </Copyable>
                 </div>
             </PageBody>
@@ -77,7 +77,7 @@
                 <p class="nq-text-s"><AlertTriangleIcon/>Don’t close this window until confirmation</p>
             </PageFooter>
             <PageFooter v-else>
-                <button class="nq-button light-blue" @click="selectCurrency">Pay with {{paymentOptions.currency}}</button>
+                <button class="nq-button light-blue" @click="selectCurrency">Pay with {{currencyFullName}}</button>
             </PageFooter>
         </SmallPage>
     </div>
@@ -97,10 +97,10 @@ import {
 } from '@nimiq/vue-components';
 import QrCode from 'qr-code';
 import { AvailableParsedPaymentOptions } from '../lib/RequestTypes';
+import { Currency } from '../lib/PublicRequestTypes';
 import CheckoutOption from './CheckoutOption.vue';
 import CurrencyInfo from './CurrencyInfo.vue';
 import StatusScreen from './StatusScreen.vue';
-import CheckoutServerApi from '../lib/CheckoutServerApi';
 
 @Component({components: {
     Account,
@@ -119,10 +119,17 @@ export default class NonNimiqCheckoutOption<
 > extends CheckoutOption<Parsed> {
     protected selected: boolean = false;
 
-    private checkNetworkInterval: number | null = null;
-
-    protected mounted() {
+    protected async mounted() {
         super.mounted();
+    }
+
+    protected get currencyFullName() {
+        const currencyNameMap: Record<Currency, string> = {
+            [Currency.NIM]: 'Nimiq',
+            [Currency.BTC]: 'Bitcoin',
+            [Currency.ETH]: 'Ethereum',
+        };
+        return currencyNameMap[this.paymentOptions.currency];
     }
 
     protected async selectCurrency() {
@@ -164,26 +171,7 @@ export default class NonNimiqCheckoutOption<
         );
 
         this.checkNetworkInterval = window.setInterval(async () => {
-            if (!this.request.callbackUrl || !this.request.csrf) return;
-            let fetchedData;
-            try {
-                fetchedData = await CheckoutServerApi.checkNetwork(this.request.callbackUrl,
-                    this.paymentOptions.currency, this.request.csrf);
-            } catch (e) {
-                return;
-            }
-
-            if (fetchedData.transaction_found === true) {
-                window.clearInterval(this.checkNetworkInterval!);
-                if (this.optionTimeout) {
-                    window.clearTimeout(this.optionTimeout);
-                }
-                return this.showSuccessScreen();
-            }
-            if (this.timeoutReached) {
-                window.clearInterval(this.checkNetworkInterval!);
-                this.timedOut();
-            }
+            this.lastPaymentState = await this.getState();
         }, 10000);
     }
 
@@ -227,19 +215,13 @@ export default class NonNimiqCheckoutOption<
         justify-content: space-around;
     }
 
-    .payment-option:not(.confirmed) h2,
-    .payment-option:not(.confirmed) a.payment-link.blurred,
-    .payment-option:not(.confirmed) .copyable-payment-information {
-        filter: blur(1.5rem);
-        opacity: .1;
-        transition: filte .5s ease, opacity .5s ease;
+    /* Hide payment info line contents until currency selected. Only show timer. */
+    .payment-option .info-line >>> > :not(.timer) {
+        transition: opacity .5s var(--nimiq-ease);
     }
-
-    .payment-option:not(.confirmed) .info-line >>> .amounts,
-    .payment-option:not(.confirmed) .info-line >>> .arrow-runway,
-    .payment-option:not(.confirmed) .info-line >>> .description .account {
+    .payment-option:not(.confirmed) .info-line >>> > :not(.timer) {
         opacity: 0;
-        transition: opacity .5s ease;
+        pointer-events: none;
     }
 
     .payment-option .page-body {
@@ -248,17 +230,24 @@ export default class NonNimiqCheckoutOption<
         padding-bottom: 0;
     }
 
+    .payment-option .account,
+    .payment-option .account >>> .identicon-and-label {
+        width: 100%;
+    }
+
     .payment-option .account >>> .identicon-and-label .identicon {
         width: 21rem;
         height: 21rem;
     }
 
     .payment-option .account >>> .identicon-and-label .label {
+        max-width: 100%;
         font-weight: 600;
         font-size: 3.5rem;
         line-height: 3.5rem;
         margin-top: 2.75rem;
         margin-bottom: 3rem;
+        text-overflow: fade;
     }
 
     .payment-option .amounts {
@@ -286,20 +275,6 @@ export default class NonNimiqCheckoutOption<
     .payment-option.confirmed .page-body {
         justify-content: flex-end;
         padding-bottom: 1rem;
-    }
-
-    .payment-option .page-body .payment-link {
-        word-break: break-all;
-        text-align: center;
-        background: none;
-    }
-
-    .payment-option:not(.confirmed) .page-body .payment-link {
-        background: var(--nimiq-blue-bg);
-        transition: background 5s ease, color 5s ease;
-        color: transparent;
-        border-radius: 1.5rem;
-        width: 100%;
     }
 
     .copyable-payment-information {

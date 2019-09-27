@@ -777,7 +777,7 @@
 
 "@nimiq/vue-components@https://github.com/nimiq/vue-components.git#daniel/build/hub/cashlinks+checkout":
   version "0.1.0"
-  resolved "https://github.com/nimiq/vue-components.git#3fe15d1b1718e45d0b8194e37e15dbe19cc8afb9"
+  resolved "https://github.com/nimiq/vue-components.git#41b54d089e270950b3629cefc9c6f9e7a42ffb41"
   dependencies:
     "@nimiq/style" "^0.7.5"
     big-integer "^1.6.44"
