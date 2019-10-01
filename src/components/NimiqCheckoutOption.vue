@@ -6,14 +6,23 @@
         :fiatFeeAmount="paymentOptions.fiatFee(request.fiatAmount, request.fiatCurrency)"
         />
     <SmallPage>
-        <StatusScreen
-            :title="title"
-            :status="status"
-            :state="state"
-            :message="message"
-            v-if="showStatusScreen"
-            @main-action="() => this.backToShop()"
-            mainAction="Go back to shop"/>
+        <transition name="transition-fade">
+            <StatusScreen
+                v-if="showStatusScreen"
+                :state="state"
+                :title="title"
+                :status="status"
+                :message="message"
+                @main-action="mainAction"
+                :mainAction="mainActionText"
+            >
+                <template v-if="timeoutReached" v-slot:warning>
+                    <StopwatchIcon class="stopwatch-icon"/>
+                    <h1 class="title nq-h1">{{ title }}</h1>
+                    <p v-if="message" class="message nq-text">{{ message }}</p>
+                </template>
+            </StatusScreen>
+        </transition>
         <template v-if="rpcState">
             <PaymentInfoLine
                 ref="info"
@@ -74,6 +83,7 @@ import {
     PageFooter,
     PaymentInfoLine,
     SmallPage,
+    StopwatchIcon,
     TransferIcon,
 } from '@nimiq/vue-components';
 import { AccountInfo } from '../lib/AccountInfo';
@@ -98,6 +108,7 @@ import CurrencyInfo from './CurrencyInfo.vue';
     SmallPage,
     StatusScreen,
     PaymentInfoLine,
+    StopwatchIcon,
     TransferIcon,
 }})
 export default class NimiqCheckoutOption
@@ -118,10 +129,11 @@ export default class NimiqCheckoutOption
     private balancesUpdating: boolean = true;
     private height: number = 0;
 
-    protected created() {
+    protected async created() {
         if (this.paymentOptions.currency !== Currency.NIM) {
             throw new Error('NimiqCheckoutOption did not get a NimiqPaymentOption.');
         }
+        return await super.created();
     }
 
     protected async mounted() {
@@ -225,22 +237,10 @@ export default class NimiqCheckoutOption
     }
 
     private async setAccountOrContract(walletId: string, address: string, isFromRequest = false) {
-        if (this.request.callbackUrl) {
-            try {
-                await this.fetchPaymentOption();
-            } catch (e) {
-                this.$rpc.reject(e);
-                return;
-            }
-        }
-        if (!this.paymentOptions.protocolSpecific.recipient) {
-            this.$rpc.reject(new Error('Failed to fetch recipient'));
-            return;
-        }
-
-        this.$emit('chosen', this.paymentOptions.currency);
+        if (!await super.selectCurrency()) return;
 
         if (this.balancesUpdating) {
+            this.state = StatusScreen.State.LOADING;
             this.showStatusScreen = true;
             await this.updateBalancePromise;
         }
@@ -309,7 +309,9 @@ export default class NimiqCheckoutOption
                     fiatAmount: this.request.fiatAmount,
                     fiatCurrency: this.request.fiatCurrency,
                     time: this.request.time - timeOffset, // normalize time to our local system time
-                    expires: this.paymentOptions.expires - timeOffset,
+                    expires: this.paymentOptions.expires
+                        ? this.paymentOptions.expires - timeOffset
+                        : undefined,
                 };
 
                 staticStore.keyguardRequest = request;
@@ -365,6 +367,11 @@ export default class NimiqCheckoutOption
         position: absolute;
         left: 0;
         top: 0;
+        transition: opacity .3s var(--nimiq-ease);
+    }
+
+    .status-screen .stopwatch-icon {
+        font-size: 15.5rem;
     }
 
     .nq-h1 {

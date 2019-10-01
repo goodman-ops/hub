@@ -341,16 +341,15 @@ export default class RpcApi {
                     return;
                 }
 
+                this._startRoute();
+
                 if (error.message === KeyguardErrors.Messages.EXPIRED) {
                     // Don't reject but navigate to checkout to display the expiration warning there.
-                    this._staticStore.originalRouteName = RequestType.CHECKOUT;
-                    this._reply(ResponseStatus.OK, { success: false });
+                    this.routerReplace(RequestType.CHECKOUT);
                     return;
                 }
 
                 this.routerReplace(keyguardResponseRouter(command, this._staticStore.request!.kind).reject);
-
-                this._startRoute();
             });
         }
     }

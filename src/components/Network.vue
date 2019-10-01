@@ -136,7 +136,7 @@ class Network extends Vue {
         const client = await this._getNetworkClient();
         if (Network._hasOrSyncsOnTopOfConsensus) return client.headInfo.height;
         return new Promise((resolve) => this.$once(Network.Events.CONSENSUS_ESTABLISHED,
-            () => resolve(client.headInfo.height)));
+            () => setTimeout(() => resolve(client.headInfo.height), 10)));
     }
 
     public async getBalances(addresses: string[]): Promise<Map<string, number>> {

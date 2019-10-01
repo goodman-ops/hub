@@ -94,7 +94,7 @@ export enum PaymentState {
 export interface PaymentOptions<C extends Currency, T extends PaymentMethod> {
     type: T;
     currency: C;
-    expires: number;
+    expires?: number;
     /**
      * Amount in the smallest unit of the currency specified in `currency`.
      * i.e Luna for Currency.NIM and Satoshi for Currency.BTC

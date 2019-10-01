@@ -1,20 +1,29 @@
 <template>
     <div class="payment-option" :id="paymentOptions.currency">
-        <CurrencyInfo
+        <CurrencyInfo v-if="request.paymentOptions.length > 1"
             :currency="paymentOptions.currency"
             :fiatCurrency="request.fiatCurrency"
             :fiatFeeAmount="paymentOptions.fiatFee(request.fiatAmount, request.fiatCurrency)"
             :currencyIcon="icon"/>
 
         <SmallPage>
-            <StatusScreen
-                :title="title"
-                :state="state"
-                :status="status"
-                v-if="showStatusScreen"
-                :message="message"
-                @main-action="() => this.backToShop()"
-                mainAction="Go back to shop"/>
+            <transition name="transition-fade">
+                <StatusScreen
+                    v-if="showStatusScreen"
+                    :state="state"
+                    :title="title"
+                    :status="status"
+                    :message="message"
+                    @main-action="mainAction"
+                    :mainAction="mainActionText"
+                >
+                    <template v-if="timeoutReached" v-slot:warning>
+                        <StopwatchIcon class="stopwatch-icon"/>
+                        <h1 class="title nq-h1">{{ title }}</h1>
+                        <p v-if="message" class="message nq-text">{{ message }}</p>
+                    </template>
+                </StatusScreen>
+            </transition>
             <PaymentInfoLine v-if="rpcState"
                 ref="info"
                 :cryptoAmount="{
@@ -73,7 +82,15 @@
                 </div>
             </PageBody>
             <PageFooter v-if="selected">
-                <a class="nq-button light-blue" :href="paymentOptions.paymentLink">Use app</a>
+                <a class="nq-button light-blue use-app-button" :disabled="appNotFound" @click="checkBlur" :href="paymentOptions.paymentLink">
+                    <template v-if="appNotFound">
+                        <span>No App found</span>
+                        <span>Please send the transaction manually</span>
+                    </template>
+                    <template v-else>
+                        Use App
+                    </template>
+                </a>
                 <p class="nq-text-s"><AlertTriangleIcon/>Don’t close this window until confirmation</p>
             </PageFooter>
             <PageFooter v-else>
@@ -93,6 +110,7 @@ import {
     PageFooter,
     PaymentInfoLine,
     SmallPage,
+    StopwatchIcon,
     UniversalAmount,
 } from '@nimiq/vue-components';
 import QrCode from 'qr-code';
@@ -112,12 +130,17 @@ import StatusScreen from './StatusScreen.vue';
     PaymentInfoLine,
     SmallPage,
     StatusScreen,
+    StopwatchIcon,
     UniversalAmount,
 }})
 export default class NonNimiqCheckoutOption<
     Parsed extends AvailableParsedPaymentOptions
 > extends CheckoutOption<Parsed> {
-    protected selected: boolean = false;
+    protected appNotFound: boolean = false;
+
+    protected async created() {
+        return await super.created();
+    }
 
     protected async mounted() {
         super.mounted();
@@ -133,20 +156,12 @@ export default class NonNimiqCheckoutOption<
     }
 
     protected async selectCurrency() {
-        this.selected = true;
         if (this.request.callbackUrl) {
+            this.state = StatusScreen.State.LOADING;
             this.showStatusScreen = true;
-            try {
-                await this.fetchPaymentOption();
-            } catch (e) {
-                this.$rpc.reject(e);
-                return;
-            }
         }
-        if (!this.paymentOptions.protocolSpecific.recipient) {
-            this.$rpc.reject(new Error('Failed to fetch recipient'));
-            return;
-        }
+        if (!await super.selectCurrency()) return false;
+
         let element: HTMLElement | null = document.getElementById(this.paymentOptions.currency!);
         if (element) {
             element = element.querySelector('.qr-code');
@@ -155,13 +170,11 @@ export default class NonNimiqCheckoutOption<
             throw new Error(`An Element #${this.paymentOptions.currency} .qr-code must exist`);
         }
 
-        this.$emit('chosen', this.paymentOptions.currency);
-
         this.$nextTick(() =>
                 QrCode.render({
                     text: this.paymentOptions.paymentLink,
                     radius: 0.5, // 0.0 to 0.5
-                    ecLevel: 'H', // L, M, Q, H
+                    ecLevel: 'M', // L, M, Q, H
                     fill: '#1F2348', // foreground color
                     background: null, // color or null for transparent
                     size: 200, // in pixels
@@ -173,17 +186,18 @@ export default class NonNimiqCheckoutOption<
         this.checkNetworkInterval = window.setInterval(async () => {
             this.lastPaymentState = await this.getState();
         }, 10000);
+        return true;
     }
 
     protected checkBlur() {
-        // see if window gets blurred as an indicator for an opened wallet app.
-    }
-
-    protected showSuccessScreen() {
-        this.title = 'Payment successful';
-        this.showStatusScreen = true;
-        this.$nextTick(() => this.state = StatusScreen.State.SUCCESS);
-        window.setTimeout(() => this.$rpc.resolve({success: true}),  StatusScreen.SUCCESS_REDIRECT_DELAY);
+        const blurTimeout = window.setTimeout(() => {
+            this.appNotFound = true;
+            window.onblur = null;
+        }, 500);
+        window.onblur = (event) => {
+            window.clearTimeout(blurTimeout);
+            window.onblur = null;
+        };
     }
 }
 </script>
@@ -193,6 +207,11 @@ export default class NonNimiqCheckoutOption<
         position: absolute;
         left: 0;
         top: 0;
+        transition: opacity .3s var(--nimiq-ease);
+    }
+
+    .status-screen .stopwatch-icon {
+        font-size: 15.5rem;
     }
 
     .currency-info h1 {
@@ -219,6 +238,7 @@ export default class NonNimiqCheckoutOption<
     .payment-option .info-line >>> > :not(.timer) {
         transition: opacity .5s var(--nimiq-ease);
     }
+
     .payment-option:not(.confirmed) .info-line >>> > :not(.timer) {
         opacity: 0;
         pointer-events: none;
@@ -287,7 +307,8 @@ export default class NonNimiqCheckoutOption<
         padding: 1rem;
         width: 100%;
         text-align: center;
-        pointer-events: none;
+        border: 1px solid rgba(31, 35, 72, 0.1);
+        word-break: break-all;
     }
 
     .page-footer a.nq-button {
@@ -305,12 +326,6 @@ export default class NonNimiqCheckoutOption<
 
     .page-footer a.nq-button + p.nq-text-s > svg {
         margin-right: 1rem;
-    }
-
-    /* todo */
-    .confirmed .copyable-payment-information >>> .copyable {
-        border: 1px solid rgba(31, 35, 72, 0.1);
-        pointer-events: all;
     }
 
     .copyable-payment-information >>> .copyable + .copyable {
@@ -351,5 +366,24 @@ export default class NonNimiqCheckoutOption<
         top: calc(50% - 1rem);
         width: 1.75rem;
         height: 2rem;
+    }
+
+    .use-app-button {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-evenly;
+        padding-top: 0.625rem;
+        padding-bottom: 0.625rem;
+    }
+
+    .use-app-button > span {
+        display: flex;
+        line-height: 1;
+    }
+
+    .use-app-button > span + span {
+        font-size: 1.625rem;
+        text-transform: none;
+        letter-spacing: normal;
     }
 </style>

@@ -37,12 +37,12 @@ export class ParsedNimiqDirectPaymentOptions extends ParsedPaymentOptions<Curren
     public amount: number;
     public protocolSpecific: {
         sender?: Nimiq.Address,
-        forceSender?: boolean,
-        fee?: number,
+        forceSender: boolean,
+        fee: number,
         flags: number,
         recipient?: Nimiq.Address,
         recipientType?: Nimiq.Account.Type,
-        validityDuration?: number,
+        validityDuration: number,
     };
 
     public get paymentLink() {
@@ -104,6 +104,8 @@ export class ParsedNimiqDirectPaymentOptions extends ParsedPaymentOptions<Curren
             } else {
                 throw new Error('If a fee is provided it must be of type string or number');
             }
+        } else {
+            fee = 0;
         }
 
         this.protocolSpecific = {

@@ -771,15 +771,19 @@
   resolved "https://registry.yarnpkg.com/@nimiq/style/-/style-0.7.5.tgz#a31904b515ee5ae17a50d1d191e8a971c63ad716"
   integrity sha512-jfY/vkl8BlMQo9kUDsDh4LL/0nnzQaLVehoD3DGVuKJXD7EJaeoVi4EMrkJ9ofdjMTMWX9zzt4kWgKyvzy5lGQ==
 
+"@nimiq/style@link:../../../.cache/yarn/v3/npm-@nimiq-vue-components-0.1.0-d1995418ddb93b5c43255851a602501e5237932b/node_modules/@nimiq/nimiq.github.io/libraries/nimiq-style":
+  version "0.0.0"
+  uid ""
+
 "@nimiq/utils@link:../nimiq.github.io/libraries/nimiq-utils":
   version "0.0.0"
   uid ""
 
 "@nimiq/vue-components@https://github.com/nimiq/vue-components.git#daniel/build/hub/cashlinks+checkout":
   version "0.1.0"
-  resolved "https://github.com/nimiq/vue-components.git#41b54d089e270950b3629cefc9c6f9e7a42ffb41"
+  resolved "https://github.com/nimiq/vue-components.git#d1995418ddb93b5c43255851a602501e5237932b"
   dependencies:
-    "@nimiq/style" "^0.7.5"
+    "@nimiq/style" "link:../../../.cache/yarn/v3/npm-@nimiq-vue-components-0.1.0-d1995418ddb93b5c43255851a602501e5237932b/node_modules/@nimiq/nimiq.github.io/libraries/nimiq-style"
     big-integer "^1.6.44"
     input-format "^0.2.4"
     qr-code "github:nimiq/qr-encoder"
@@ -7846,9 +7850,9 @@ rc@^1.1.6, rc@^1.2.7:
     strip-json-comments "~2.0.1"
 
 react-is@^16.8.1:
-  version "16.9.0"
-  resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.9.0.tgz#21ca9561399aad0ff1a7701c01683e8ca981edcb"
-  integrity sha512-tJBzzzIgnnRfEm046qRcURvwQnZVXmuCbscxUO5RWrGTXpon2d4c8mI0D8WE6ydVIm29JiLB6+RslkIvym9Rjw==
+  version "16.10.1"
+  resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.10.1.tgz#0612786bf19df406502d935494f0450b40b8294f"
+  integrity sha512-BXUMf9sIOPXXZWqr7+c5SeOKJykyVr2u0UDzEf4LNGc6taGkQe1A9DFD07umCIXz45RLr9oAAwZbAJ0Pkknfaw==
 
 read-pkg-up@^1.0.1:
   version "1.0.1"

@@ -217,6 +217,7 @@ class Demo {
                 appName: 'Accounts Demos',
                 shopLogoUrl: `${location.origin}/nimiq.png`,
                 callbackUrl: `${location.origin}/callback.html`,
+                csrf: 'dummy-csrf-token',
                 time: now,
                 extraData: 'Test MultiCheckout',
                 fiatCurrency: 'EUR',
@@ -235,7 +236,7 @@ class Demo {
                     {
                         currency: HubApi.Currency.NIM,
                         type: HubApi.PaymentMethod.DIRECT,
-                        amount: '2000000000',
+                        amount: '290000',
                         expires: + new Date(now + 15 * 60000), // 15 minutes
                         protocolSpecific: {
                             fee: 50000,

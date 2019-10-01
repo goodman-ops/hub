@@ -61,14 +61,18 @@ export default class CheckoutServerApi {
         if (CheckoutServerApi._getStatePromises.has(currency)) {
             return CheckoutServerApi._getStatePromises.get(currency)!;
         }
-        const fetchedDataPromise = CheckoutServerApi._fetchData(endPoint, data, csrfToken);
-        CheckoutServerApi._getStatePromises.set(currency, fetchedDataPromise);
-        fetchedDataPromise.then(
-            () => window.setTimeout(
-                () => CheckoutServerApi._getStatePromises.delete(currency),
-                3000,
-            ),
+        const fetchedDataPromise = CheckoutServerApi._fetchData(endPoint, data, csrfToken).then(
+            (value) => {
+                window.setTimeout(
+                    () => CheckoutServerApi._getStatePromises.delete(currency),
+                    3000,
+                );
+                value.time = isMilliseconds(value.time) ? value.time : value.time * 1000;
+                return value;
+            },
         );
+        CheckoutServerApi._getStatePromises.set(currency, fetchedDataPromise);
+
         return fetchedDataPromise;
     }
 

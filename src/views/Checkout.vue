@@ -1,11 +1,12 @@
 <template>
     <div class="container">
         <Carousel
+            :class="{'offset-currency-info-on-disabled': request.paymentOptions.length > 1}"
             :entries="request.paymentOptions.map((paymentOptions) => paymentOptions.currency)"
             :animationDuration="500"
             :selected="selectedCurrency"
-            :disabled="choosenCurrency !== null"
-            @select="updateSelection">
+            :disabled="choosenCurrency !== null || availableCurrencies.length === 0"
+            @select="selectedCurrency = $event">
             <template v-for="paymentOptions of request.paymentOptions" v-slot:[paymentOptions.currency]>
                 <NimiqCheckoutOption
                     v-if="paymentOptions.currency === Currency.NIM"
@@ -63,12 +64,12 @@ export default class Checkout extends Vue {
     @Static private request!: ParsedCheckoutRequest;
     private choosenCurrency: Currency | null = null;
     private selectedCurrency: Currency = Currency.NIM;
-    private availableCurrencies: Set<Currency> = new Set<Currency>();
+    private availableCurrencies: Currency[] = [];
 
     private async created() {
         const $subtitle = document.querySelector('.logo .logo-subtitle')!;
         $subtitle.textContent = 'Checkout';
-        this.request.paymentOptions.forEach((option) => this.availableCurrencies.add(option.currency));
+        this.availableCurrencies = this.request.paymentOptions.map((option) => option.currency);
         document.title = 'Nimiq Checkout';
     }
 
@@ -76,23 +77,13 @@ export default class Checkout extends Vue {
         this.$rpc.reject(new Error(ERROR_CANCELED));
     }
 
-    private updateSelection(selectedCurrency: string) {
-        this.selectedCurrency = selectedCurrency as Currency;
-    }
-
     private chooseCurrency(currency: Currency) {
+        this.selectedCurrency = currency;
         this.choosenCurrency = currency;
     }
 
     private expired(currency: Currency) {
-        this.availableCurrencies.delete(currency);
-        if (this.availableCurrencies.size === 0 || this.choosenCurrency === currency) {
-            this.choosenCurrency = currency;
-            return;
-        }
-        if (this.selectedCurrency === currency) {
-            this.selectedCurrency = this.availableCurrencies.values().next().value;
-        }
+        this.availableCurrencies.splice(this.availableCurrencies.indexOf(currency), 1);
     }
 
     private data() {
@@ -120,16 +111,15 @@ export default class Checkout extends Vue {
         box-sizing: border-box;
         padding: 0;
         overflow: hidden;
+        transition: margin-top 1s var(--nimiq-ease);
+    }
+
+    .carousel.disabled.offset-currency-info-on-disabled {
+        margin-top: -16.125rem; /* currency-info height */
     }
 
     .carousel >>> .payment-option {
-        transition: filter .5s ease;
         padding: 4rem 0;
-    }
-
-    .carousel >>> > :not(.selected) .payment-option {
-        -webkit-filter: grayscale(100%); /* Safari 6.0 - 9.0 */
-        filter: grayscale(100%);
     }
 
     .carousel >>> .currency-info {
@@ -141,19 +131,139 @@ export default class Checkout extends Vue {
     }
 
     .carousel >>> > :not(.selected) .currency-info {
-        transform: translateY(-6rem);
+        transform: translateY(-7.875rem);
     }
 
-    /* make empty padding in cards click though to cards behind */
+    .carousel.disabled >>> .currency-info {
+        opacity: 0;
+    }
+
+    /* make empty padding in cards click through to cards behind */
     .carousel >>> > * {
         pointer-events: none;
     }
+
     .carousel >>> .currency-info > *,
     .carousel >>> .nq-card {
         pointer-events: all !important;
     }
 
-    .carousel.disabled >>> > :not(.selected) .currency-info {
+    /* Show placeholders when card is not selected */
+    .carousel >>> .timer,
+    .carousel >>> .nq-button,
+    .carousel >>> .nq-button-s,
+    .carousel >>> .nq-card > .nq-h1,
+    .carousel >>> .info-line .account,
+    .carousel >>> .info-line .amounts,
+    .carousel >>> .nq-card-body .label,
+    .carousel >>> .nq-card-body .amount,
+    .carousel >>> .account-list .amount,
+    .carousel >>> .nq-card-footer .nq-link,
+    .carousel >>> .nq-card-body .identicon-and-label,
+    .carousel >>> .account-list .identicon-and-label > *,
+    .carousel >>> .nq-card .non-sufficient-balance .nq-text {
+        position: relative;
+    }
+
+    .carousel >>> .timer::after,
+    .carousel >>> .nq-button::after,
+    .carousel >>> .nq-button-s::after,
+    .carousel >>> .nq-card > .nq-h1::after,
+    .carousel >>> .info-line .account::after,
+    .carousel >>> .info-line .amounts::after,
+    .carousel >>> .nq-card-body .label::after,
+    .carousel >>> .nq-card-body .amount::after,
+    .carousel >>> .account-list .amount::after,
+    .carousel >>> .nq-card-footer .nq-link::after,
+    .carousel >>> .nq-card-body .identicon-and-label::after,
+    .carousel >>> .account-list .identicon-and-label > *::after,
+    .carousel >>> .nq-card .non-sufficient-balance .nq-text::after {
+        --size: 100%;
+        --placeholder-width: var(--size);
+        --placeholder-height: var(--size);
+        content: '';
+        position: absolute;
+        top: calc((100% - var(--placeholder-height)) / 2);
+        left: calc((100% - var(--placeholder-width)) / 2);
+        width: var(--placeholder-width);
+        height: var(--placeholder-height);
+        background-color: #f2f2f4; /* --nimiq-blue 0.06 opacity */
+        opacity: 0;
+        border: none;
+        border-radius: 500px;
+        transition: opacity .5s var(--nimiq-ease);
+    }
+
+    .carousel >>> .nq-card > .nq-h1::after {
+        --placeholder-width: 85%;
+    }
+
+    .carousel >>> .info-line .amounts::after,
+    .carousel >>> .info-line .account::after {
+        --placeholder-height: 3.25rem;
+        top: initial;
+        box-shadow: 0 0 0 1rem var(--nimiq-card-bg);
+    }
+
+    .carousel >>> > :not(.selected) .nq-button::after {
+        --size: 101%;
+    }
+
+    .carousel >>> .nq-card-body .identicon-and-label::after {
+        --size: 21rem;
+        top: initial;
+        left: initial;
+    }
+
+    .carousel >>> .nq-card .non-sufficient-balance .nq-text::after {
+        --placeholder-width: 90%;
+    }
+
+    .carousel >>> .nq-card > .nq-h1::after,
+    .carousel >>> .nq-card-body .label::after,
+    .carousel >>> .nq-card-body .amount::after,
+    .carousel >>> .nq-card-footer .nq-link::after,
+    .carousel >>> .nq-card .non-sufficient-balance .nq-text::after {
+        box-shadow: 0 0 0 .6rem var(--nimiq-card-bg);
+    }
+
+    .carousel >>> > :not(.selected) .timer::after,
+    .carousel >>> > :not(.selected) .nq-button::after,
+    .carousel >>> > :not(.selected) .nq-button-s::after,
+    .carousel >>> > :not(.selected) .nq-card > .nq-h1::after,
+    .carousel >>> > :not(.selected) .info-line .account::after,
+    .carousel >>> > :not(.selected) .info-line .amounts::after,
+    .carousel >>> > :not(.selected) .nq-card-body .label::after,
+    .carousel >>> > :not(.selected) .account-list .amount::after,
+    .carousel >>> > :not(.selected) .nq-card-body .amount::after,
+    .carousel >>> > :not(.selected) .nq-card-footer .nq-link::after,
+    .carousel >>> > :not(.selected) .nq-card-body .identicon-and-label::after,
+    .carousel >>> > :not(.selected) .account-list .identicon-and-label > *::after,
+    .carousel >>> > :not(.selected) .nq-card .non-sufficient-balance .nq-text::after {
+        opacity: 1;
+    }
+
+    .carousel >>> .amounts {
+        transition: border-top-color .5s var(--nimiq-ease);
+    }
+
+    .carousel >>> .nq-button {
+        transition: box-shadow .5s var(--nimiq-ease);
+    }
+
+    .carousel >>> .arrow-runway {
+        transition: opacity .5s var(--nimiq-ease);
+    }
+
+    .carousel >>> > :not(.selected) .amounts {
+        border-top-color: var(--nimiq-card-bg);
+    }
+
+    .carousel >>> > :not(.selected) .nq-button {
+        box-shadow: none;
+    }
+
+    .carousel >>> > :not(.selected) .arrow-runway {
         opacity: 0;
     }
 </style>
