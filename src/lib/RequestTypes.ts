@@ -1,5 +1,5 @@
 type BigInteger = import('big-integer').BigInteger; // imports only the type without bundling
-import { FormattableNumber, toNonScientificNumberString } from '@nimiq/utils';
+import { toNonScientificNumberString } from '@nimiq/utils';
 import { isMilliseconds } from './Constants';
 import {
     RequestType,
@@ -78,10 +78,6 @@ export abstract class ParsedPaymentOptions<C extends Currency, T extends Payment
                 ? options.expires
                 : options.expires * 1000
             : undefined;
-    }
-
-    public get baseUnitAmount(): string {
-        return new FormattableNumber(this.amount).moveDecimalSeparator(-this.decimals).toString();
     }
 
     public update<P extends ParsedPaymentOptions<C, T>>(
