@@ -95,10 +95,6 @@ export default class Checkout extends Vue {
 </script>
 
 <style scoped>
-    .container >>> .small-page {
-        position: relative;
-    }
-
     .container >>> .nq-h1 {
         margin-top: 3.5rem;
         margin-bottom: 1rem;
