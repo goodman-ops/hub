@@ -95,10 +95,6 @@ export default class Checkout extends Vue {
 </script>
 
 <style scoped>
-    .container >>> .small-page {
-        position: relative;
-    }
-
     .container >>> .nq-h1 {
         margin-top: 3.5rem;
         margin-bottom: 1rem;
@@ -156,9 +152,11 @@ export default class Checkout extends Vue {
     .carousel >>> .info-line .account,
     .carousel >>> .info-line .amounts,
     .carousel >>> .nq-card-body .label,
-    .carousel >>> .nq-card-body .amount,
+    .carousel >>> .nq-card-body .amounts .crypto,
+    .carousel >>> .nq-card-body .amounts .fee,
     .carousel >>> .account-list .amount,
     .carousel >>> .nq-card-footer .nq-link,
+    .carousel >>> .account-selector .wallet-label,
     .carousel >>> .nq-card-body .identicon-and-label,
     .carousel >>> .account-list .identicon-and-label > *,
     .carousel >>> .nq-card .non-sufficient-balance .nq-text {
@@ -172,15 +170,17 @@ export default class Checkout extends Vue {
     .carousel >>> .info-line .account::after,
     .carousel >>> .info-line .amounts::after,
     .carousel >>> .nq-card-body .label::after,
-    .carousel >>> .nq-card-body .amount::after,
+    .carousel >>> .nq-card-body .amounts .crypto::after,
+    .carousel >>> .nq-card-body .amounts .fee::after,
     .carousel >>> .account-list .amount::after,
     .carousel >>> .nq-card-footer .nq-link::after,
+    .carousel >>> .account-selector .wallet-label::after,
     .carousel >>> .nq-card-body .identicon-and-label::after,
     .carousel >>> .account-list .identicon-and-label > *::after,
     .carousel >>> .nq-card .non-sufficient-balance .nq-text::after {
-        --size: 100%;
-        --placeholder-width: var(--size);
-        --placeholder-height: var(--size);
+        --placeholder-size: 100%;
+        --placeholder-width: var(--placeholder-size);
+        --placeholder-height: var(--placeholder-size);
         content: '';
         position: absolute;
         top: calc((100% - var(--placeholder-height)) / 2);
@@ -205,14 +205,16 @@ export default class Checkout extends Vue {
         box-shadow: 0 0 0 1rem var(--nimiq-card-bg);
     }
 
-    .carousel >>> > :not(.selected) .nq-button::after {
-        --size: 101%;
+    .carousel >>> .nq-button::after,
+    .carousel >>> .nq-button-s::after {
+        --placeholder-size: 105%;
     }
 
     .carousel >>> .nq-card-body .identicon-and-label::after {
-        --size: 21rem;
+        --placeholder-size: 21rem;
         top: initial;
         left: initial;
+        box-shadow: 0 0 0 4rem var(--nimiq-card-bg);
     }
 
     .carousel >>> .nq-card .non-sufficient-balance .nq-text::after {
@@ -221,7 +223,7 @@ export default class Checkout extends Vue {
 
     .carousel >>> .nq-card > .nq-h1::after,
     .carousel >>> .nq-card-body .label::after,
-    .carousel >>> .nq-card-body .amount::after,
+    .carousel >>> .nq-card-body .amounts .crypto::after,
     .carousel >>> .nq-card-footer .nq-link::after,
     .carousel >>> .nq-card .non-sufficient-balance .nq-text::after {
         box-shadow: 0 0 0 .6rem var(--nimiq-card-bg);
@@ -235,35 +237,28 @@ export default class Checkout extends Vue {
     .carousel >>> > :not(.selected) .info-line .amounts::after,
     .carousel >>> > :not(.selected) .nq-card-body .label::after,
     .carousel >>> > :not(.selected) .account-list .amount::after,
-    .carousel >>> > :not(.selected) .nq-card-body .amount::after,
+    .carousel >>> > :not(.selected) .nq-card-body .amounts .crypto::after,
+    .carousel >>> > :not(.selected) .nq-card-body .amounts .fee::after,
     .carousel >>> > :not(.selected) .nq-card-footer .nq-link::after,
+    .carousel >>> > :not(.selected) .account-selector .wallet-label::after,
     .carousel >>> > :not(.selected) .nq-card-body .identicon-and-label::after,
     .carousel >>> > :not(.selected) .account-list .identicon-and-label > *::after,
     .carousel >>> > :not(.selected) .nq-card .non-sufficient-balance .nq-text::after {
         opacity: 1;
     }
 
-    .carousel >>> .amounts {
-        transition: border-top-color .5s var(--nimiq-ease);
-    }
-
-    .carousel >>> .nq-button {
-        transition: box-shadow .5s var(--nimiq-ease);
-    }
-
-    .carousel >>> .arrow-runway {
-        transition: opacity .5s var(--nimiq-ease);
-    }
-
     .carousel >>> > :not(.selected) .amounts {
+        transition: border-top-color .5s var(--nimiq-ease);
         border-top-color: var(--nimiq-card-bg);
     }
 
     .carousel >>> > :not(.selected) .nq-button {
+        transition: box-shadow .5s var(--nimiq-ease);
         box-shadow: none;
     }
 
     .carousel >>> > :not(.selected) .arrow-runway {
+        transition: opacity .5s var(--nimiq-ease);
         opacity: 0;
     }
 </style>

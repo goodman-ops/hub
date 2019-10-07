@@ -27,7 +27,7 @@
             <PaymentInfoLine
                 ref="info"
                 :cryptoAmount="{
-                    amount: paymentOptions.total,
+                    amount: paymentOptions.amount,
                     currency: paymentOptions.currency,
                     digits: paymentOptions.digits,
                 }"
@@ -161,6 +161,10 @@ export default class NimiqCheckoutOption
                 }
             }
         }
+    }
+
+    protected destroyed() {
+        super.destroyed();
     }
 
     private async getBalances(): Promise<Map<string, number>> {

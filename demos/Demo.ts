@@ -229,8 +229,8 @@ class Demo {
                         amount: '290000',
                         expires: + new Date(now + 15 * 60000), // 15 minutes
                         protocolSpecific: {
-                            fee: 270,
-                            recipient: 'dsadasdfasfasfaassdddasaa',
+                            feePerByte: 2, // 2 sat per byte
+                            recipient: '17w6ar5SqXFGr786WjGHB8xyu48eujHaBe', // Unicef
                         },
                     },
                     {
@@ -248,9 +248,9 @@ class Demo {
                         amount: '910000',
                         expires: + new Date(now + 15 * 60000), // 15 minutes
                         protocolSpecific: {
-                            gasLimit: 5,
+                            gasLimit: 21000,
                             gasPrice: '10000',
-                            recipient: 'dsadasdfasfasfaassdddasaa',
+                            recipient: '0xa4725d6477644286b354288b51122a808389be83', // the water project
                         },
                     },
                 ],

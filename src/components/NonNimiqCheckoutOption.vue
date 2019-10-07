@@ -6,97 +6,123 @@
             :fiatFeeAmount="paymentOptions.fiatFee(request.fiatAmount, request.fiatCurrency)"
             :currencyIcon="icon"/>
 
-        <SmallPage>
+        <div class="nq-card-wrapper">
             <transition name="transition-fade">
-                <StatusScreen
-                    v-if="showStatusScreen"
-                    :state="state"
-                    :title="title"
-                    :status="status"
-                    :message="message"
-                    @main-action="mainAction"
-                    :mainAction="mainActionText"
-                >
-                    <template v-if="timeoutReached" v-slot:warning>
-                        <StopwatchIcon class="stopwatch-icon"/>
-                        <h1 class="title nq-h1">{{ title }}</h1>
-                        <p v-if="message" class="message nq-text">{{ message }}</p>
-                    </template>
-                </StatusScreen>
+                <SmallPage v-if="!manualPaymentDetailsOpen">
+                    <transition name="transition-fade">
+                        <StatusScreen
+                            v-if="showStatusScreen"
+                            :state="state"
+                            :title="title"
+                            :status="status"
+                            :message="message"
+                            @main-action="mainAction"
+                            :mainAction="mainActionText"
+                        >
+                            <template v-if="timeoutReached" v-slot:warning>
+                                <StopwatchIcon class="stopwatch-icon"/>
+                                <h1 class="title nq-h1">{{ title }}</h1>
+                                <p v-if="message" class="message nq-text">{{ message }}</p>
+                            </template>
+                        </StatusScreen>
+                    </transition>
+                    <PaymentInfoLine v-if="rpcState"
+                        ref="info"
+                        :cryptoAmount="{
+                            amount: paymentOptions.amount,
+                            currency: paymentOptions.currency,
+                            digits: paymentOptions.digits,
+                        }"
+                        :fiatAmount="request.fiatAmount && request.fiatCurrency ? {
+                            amount: request.fiatAmount * 10 ** request.fiatCurrency.digits,
+                            currency: request.fiatCurrency.code,
+                            digits: request.fiatCurrency.digits,
+                        } : null"
+                        :address="paymentOptions.protocolSpecific.recipient"
+                        :origin="rpcState.origin"
+                        :shopLogoUrl="request.shopLogoUrl"
+                        :startTime="request.time"
+                        :endTime="paymentOptions.expires" />
+                    <h2 class="nq-h1" v-if="this.selected">
+                        Send your transaction
+                    </h2>
+                    <PageBody v-if="!this.selected">
+                        <Account layout="column"
+                            :image="request.shopLogoUrl"
+                            :label="rpcState.origin.split('://')[1]"/>
+                        <div class="amounts">
+                            <UniversalAmount class="crypto nq-light-blue"
+                                :decimals="paymentOptions.digits"
+                                :minDecimals="paymentOptions.minDecimals"
+                                :maxDecimals="paymentOptions.digits < 8 ? paymentOptions.digits : 8"
+                                :currency="paymentOptions.currency"
+                                :amount="paymentOptions.amount"
+                            />
+                            <div v-if="paymentOptions.fee !== 0" class="fee">
+                                +
+                                ~<UniversalAmount v-if="paymentOptions.fee"
+                                    :decimals="paymentOptions.digits"
+                                    :minDecimals="paymentOptions.minDecimals"
+                                    :maxDecimals="paymentOptions.digits < 8 ? paymentOptions.digits : 8"
+                                    :currency="paymentOptions.currency"
+                                    :amount="paymentOptions.fee"
+                                />
+                                network fee
+                            </div>
+                        </div>
+                    </PageBody>
+                    <PageBody v-else>
+                        <p v-if="paymentOptions.fee" class="nq-notice warning">
+                            Don’t close this window until confirmation. <br />
+                            Apply a network fee of at least <UniversalAmount
+                                :decimals="paymentOptions.digits"
+                                :minDecimals="paymentOptions.digits"
+                                :maxDecimals="paymentOptions.digits"
+                                :currency="paymentOptions.currency"
+                                :amount="paymentOptions.fee"
+                            />.
+                        </p>
+                        <QrCode
+                            :data="paymentOptions.paymentLink"
+                            :fill="{
+                                type: 'radial-gradient',
+                                position: [1, 1, 0, 1, 1, Math.sqrt(2)],
+                                colorStops: [ [0, '#260133'], [1, '#1F2348'] ] // nimiq-blue
+                            }"
+                            :size="200"
+                        />
+                    </PageBody>
+                    <PageFooter v-if="selected">
+                        <a class="nq-button light-blue use-app-button"
+                            :disabled="appNotFound"
+                            @click="checkBlur"
+                            :href="paymentOptions.paymentLink"
+                        >
+                            <template v-if="appNotFound">
+                                <span>No App found</span>
+                                <span>Please send the transaction manually</span>
+                            </template>
+                            <template v-else>
+                                Open Wallet App
+                            </template>
+                        </a>
+                        <p class="nq-text-s" @click="manualPaymentDetailsOpen = true" >
+                            Enter manually<CaretRightSmallIcon/>
+                        </p>
+                    </PageFooter>
+                    <PageFooter v-else>
+                        <button class="nq-button light-blue" @click="selectCurrency">Pay with {{currencyFullName}}</button>
+                    </PageFooter>
+                </SmallPage>
             </transition>
-            <PaymentInfoLine v-if="rpcState"
-                ref="info"
-                :cryptoAmount="{
-                    amount: paymentOptions.total,
-                    currency: paymentOptions.currency,
-                    digits: paymentOptions.digits,
-                }"
-                :fiatAmount="request.fiatAmount && request.fiatCurrency ? {
-                    amount: request.fiatAmount * 10 ** request.fiatCurrency.digits,
-                    currency: request.fiatCurrency.code,
-                    digits: request.fiatCurrency.digits,
-                } : null"
-                :address="paymentOptions.protocolSpecific.recipient"
-                :origin="rpcState.origin"
-                :shopLogoUrl="request.shopLogoUrl"
-                :startTime="request.time"
-                :endTime="paymentOptions.expires" />
-            <h2 class="nq-h1" v-if="this.selected">
-                Send your transaction
-            </h2>
-            <PageBody v-if="!this.selected">
-                <Account layout="column"
-                    :image="request.shopLogoUrl"
-                    :label="rpcState.origin.split('://')[1]"/>
-                <div class="amounts">
-                    <UniversalAmount class="crypto nq-light-blue"
-                        :decimals="paymentOptions.digits"
-                        :minDecimals="paymentOptions.minDecimals"
-                        :maxDecimals="paymentOptions.digits < 8 ? paymentOptions.digits : 8"
-                        :currency="paymentOptions.currency"
-                        :amount="paymentOptions.total"/>
-                    <UniversalAmount class="fiat"
-                        :decimals="request.fiatCurrency.digits"
-                        :minDecimals="request.fiatCurrency.digits"
-                        :maxDecimals="request.fiatCurrency.digits"
-                        :currency="request.fiatCurrency.code"
-                        :amount="request.fiatAmount * 10 ** request.fiatCurrency.digits"/>
-                </div>
-            </PageBody>
-            <PageBody v-else>
-                <div class="qr-code">
-                </div>
-                <div class="copyable-payment-information">
-                    <Copyable :text="paymentOptions.baseUnitAmount">
-                        <UniversalAmount class="nq-link"
-                            :decimals="paymentOptions.digits"
-                            :minDecimals="paymentOptions.digits"
-                            :maxDecimals="paymentOptions.digits"
-                            :currency="paymentOptions.currency"
-                            :amount="paymentOptions.amount" />
-                        <!--a class="nq-link">{{paymentOptions.total}} {{paymentOptions.currency}}</a-->
-                    </Copyable>
-                    <Copyable>
-                        <a class="nq-link">{{paymentOptions.protocolSpecific.recipient}}</a>
-                    </Copyable>
-                </div>
-            </PageBody>
-            <PageFooter v-if="selected">
-                <a class="nq-button light-blue use-app-button" :disabled="appNotFound" @click="checkBlur" :href="paymentOptions.paymentLink">
-                    <template v-if="appNotFound">
-                        <span>No App found</span>
-                        <span>Please send the transaction manually</span>
-                    </template>
-                    <template v-else>
-                        Use App
-                    </template>
-                </a>
-                <p class="nq-text-s"><AlertTriangleIcon/>Don’t close this window until confirmation</p>
-            </PageFooter>
-            <PageFooter v-else>
-                <button class="nq-button light-blue" @click="selectCurrency">Pay with {{currencyFullName}}</button>
-            </PageFooter>
-        </SmallPage>
+            <transition name="transition-fade">
+                <CheckoutManualPaymentDetails
+                    v-if="manualPaymentDetailsOpen"
+                    :paymentDetails="manualPaymentDetails"
+                    @close="manualPaymentDetailsOpen = false"
+                />
+            </transition>
+        </div>
     </div>
 </template>
 
@@ -104,30 +130,32 @@
 import { Component } from 'vue-property-decorator';
 import {
     Account,
-    AlertTriangleIcon,
-    Copyable,
+    CaretRightSmallIcon,
+    CloseIcon,
     PageBody,
     PageFooter,
     PaymentInfoLine,
+    QrCode,
     SmallPage,
     StopwatchIcon,
     UniversalAmount,
 } from '@nimiq/vue-components';
-import QrCode from 'qr-code';
 import { AvailableParsedPaymentOptions } from '../lib/RequestTypes';
-import { Currency } from '../lib/PublicRequestTypes';
 import CheckoutOption from './CheckoutOption.vue';
 import CurrencyInfo from './CurrencyInfo.vue';
 import StatusScreen from './StatusScreen.vue';
+import CheckoutManualPaymentDetails from './CheckoutManualPaymentDetails.vue';
 
 @Component({components: {
     Account,
-    AlertTriangleIcon,
-    Copyable,
+    CaretRightSmallIcon,
+    CheckoutManualPaymentDetails,
+    CloseIcon,
     CurrencyInfo,
     PageBody,
     PageFooter,
     PaymentInfoLine,
+    QrCode,
     SmallPage,
     StatusScreen,
     StopwatchIcon,
@@ -136,7 +164,10 @@ import StatusScreen from './StatusScreen.vue';
 export default class NonNimiqCheckoutOption<
     Parsed extends AvailableParsedPaymentOptions
 > extends CheckoutOption<Parsed> {
+    protected currencyFullName: string = ''; // to be set by child class
     protected appNotFound: boolean = false;
+
+    protected manualPaymentDetailsOpen: boolean = false;
 
     protected async created() {
         return await super.created();
@@ -144,15 +175,14 @@ export default class NonNimiqCheckoutOption<
 
     protected async mounted() {
         super.mounted();
+        if (!this.currencyFullName) {
+            this.currencyFullName = this.paymentOptions.currency; // just as a fallback in case not set by child class
+        }
     }
 
-    protected get currencyFullName() {
-        const currencyNameMap: Record<Currency, string> = {
-            [Currency.NIM]: 'Nimiq',
-            [Currency.BTC]: 'Bitcoin',
-            [Currency.ETH]: 'Ethereum',
-        };
-        return currencyNameMap[this.paymentOptions.currency];
+    protected destroyed() {
+        if (this.checkNetworkInterval) clearInterval(this.checkNetworkInterval);
+        super.destroyed();
     }
 
     protected async selectCurrency() {
@@ -161,27 +191,6 @@ export default class NonNimiqCheckoutOption<
             this.showStatusScreen = true;
         }
         if (!await super.selectCurrency()) return false;
-
-        let element: HTMLElement | null = document.getElementById(this.paymentOptions.currency!);
-        if (element) {
-            element = element.querySelector('.qr-code');
-        }
-        if (!element) {
-            throw new Error(`An Element #${this.paymentOptions.currency} .qr-code must exist`);
-        }
-
-        this.$nextTick(() =>
-                QrCode.render({
-                    text: this.paymentOptions.paymentLink,
-                    radius: 0.5, // 0.0 to 0.5
-                    ecLevel: 'M', // L, M, Q, H
-                    fill: '#1F2348', // foreground color
-                    background: null, // color or null for transparent
-                    size: 200, // in pixels
-                },
-                element!,
-            ),
-        );
 
         this.checkNetworkInterval = window.setInterval(async () => {
             this.lastPaymentState = await this.getState();
@@ -203,17 +212,6 @@ export default class NonNimiqCheckoutOption<
 </script>
 
 <style scoped>
-    .status-screen {
-        position: absolute;
-        left: 0;
-        top: 0;
-        transition: opacity .3s var(--nimiq-ease);
-    }
-
-    .status-screen .stopwatch-icon {
-        font-size: 15.5rem;
-    }
-
     .currency-info h1 {
         display: flex;
         align-items: center;
@@ -227,27 +225,58 @@ export default class NonNimiqCheckoutOption<
         margin-right: 2rem;
     }
 
+    .payment-option .nq-card-wrapper {
+        position: relative;
+    }
+
+    .payment-option .nq-card-wrapper > * {
+        transition: opacity .3s var(--nimiq-ease);
+    }
+
+    .payment-option .nq-card-wrapper > .transition-fade-leave-active {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .small-page {
+        position: relative;
+    }
+
+    .status-screen {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transition: opacity .3s var(--nimiq-ease);
+    }
+
+    .status-screen .stopwatch-icon {
+        font-size: 15.5rem;
+    }
+
     .payment-option .page-body {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: space-around;
-    }
-
-    /* Hide payment info line contents until currency selected. Only show timer. */
-    .payment-option .info-line >>> > :not(.timer) {
-        transition: opacity .5s var(--nimiq-ease);
-    }
-
-    .payment-option:not(.confirmed) .info-line >>> > :not(.timer) {
-        opacity: 0;
-        pointer-events: none;
-    }
-
-    .payment-option .page-body {
         width: 52.5rem;
         padding-top: 0;
         padding-bottom: 0;
+        text-align: center;
+    }
+
+    .payment-option.confirmed .page-body {
+        padding-bottom: 1rem;
+    }
+
+    /* Hide payment info line contents until currency selected. Only show timer. */
+    .payment-option .info-line >>> > :not(.timer):not(.amounts) {
+        transition: opacity .5s var(--nimiq-ease);
+    }
+
+    .payment-option:not(.confirmed) .info-line >>> > :not(.timer):not(.amounts) {
+        opacity: 0;
+        pointer-events: none;
     }
 
     .payment-option .account,
@@ -286,29 +315,10 @@ export default class NonNimiqCheckoutOption<
         line-height: 5rem;
     }
 
-    .payment-option .amounts .fiat {
+    .payment-option .amounts .fee {
         margin-top: 1.75rem;
         font-size: 2rem;
         line-height: 2.75rem;
-    }
-
-    .payment-option.confirmed .page-body {
-        justify-content: flex-end;
-        padding-bottom: 1rem;
-    }
-
-    .copyable-payment-information {
-        margin-top: 2rem;
-        width: 100%;
-    }
-
-    .copyable-payment-information >>> .copyable {
-        margin-bottom: 0;
-        padding: 1rem;
-        width: 100%;
-        text-align: center;
-        border: 1px solid rgba(31, 35, 72, 0.1);
-        word-break: break-all;
     }
 
     .page-footer a.nq-button {
@@ -319,53 +329,16 @@ export default class NonNimiqCheckoutOption<
     .page-footer a.nq-button + p.nq-text-s {
         align-self: center;
         color:  rgba(31, 35, 72, 0.5);
-        align-content: center;
+        align-items: center;
         margin: 0 0 1rem;
         display: flex;
+        cursor: pointer;
     }
 
-    .page-footer a.nq-button + p.nq-text-s > svg {
-        margin-right: 1rem;
-    }
-
-    .copyable-payment-information >>> .copyable + .copyable {
-        border-top: 0;
-    }
-
-    .copyable-payment-information >>> .copyable:first-of-type {
-        border-radius: .5rem .5rem 0 0;
-    }
-
-    .copyable-payment-information >>> .copyable:last-of-type {
-        border-radius: 0 0 .5rem .5rem;
-    }
-
-    .copyable-payment-information >>> .copyable.copied:after,
-    .copyable-payment-information >>> .copyable:before,
-    .copyable-payment-information.copied >>> .copyable:before {
-        content: "";
-    }
-
-    .copyable-payment-information >>> .copyable:hover:before {
-        padding: 0;
-        opacity: .5;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 35 40'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M34.07 6.01L28.95.92c-.6-.59-1.4-.92-2.24-.92H12.33a3.17 3.17 0 0 0-3.16 3.17v5.16h-6A3.17 3.17 0 0 0 0 11.5v25.35A3.17 3.17 0 0 0 3.17 40h19.5a3.17 3.17 0 0 0 3.16-3.16v-5.17h6A3.17 3.17 0 0 0 35 28.5V8.25c0-.84-.33-1.65-.93-2.24zM22.5 35.83c0 .46-.37.84-.83.84H4.17a.83.83 0 0 1-.84-.84V12.5c0-.46.38-.83.84-.83h12.97c.22 0 .43.08.58.23l4.53 4.43c.16.16.25.37.25.6v18.9zm3.75-7.5h4.58c.46 0 .84-.37.84-.83V8.6a.83.83 0 0 0-.25-.6l-4.58-4.47a.83.83 0 0 0-.58-.24l-12.93.04a.83.83 0 0 0-.83.84v3.75c0 .23.19.41.42.41h4.63c.84 0 1.64.33 2.23.93l5.12 5.09c.6.59.93 1.4.93 2.23v11.34c0 .23.19.41.42.41z' fill='currentColor'/%3E%3C/svg%3E");
-        left: 1.5rem;
-        top: calc(50% - 1rem);
-        width: 1.75rem;
-        height: 2rem;
-        transition: ease-out;
-    }
-
-    .copyable-payment-information >>> .copyable.copied:before {
-        padding: 0;
-        opacity: 1;
-
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 35 40'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M34.07 6.01L28.95.92c-.6-.59-1.4-.92-2.24-.92H12.33a3.17 3.17 0 0 0-3.16 3.17v5.16h-6A3.17 3.17 0 0 0 0 11.5v25.35A3.17 3.17 0 0 0 3.17 40h19.5a3.17 3.17 0 0 0 3.16-3.16v-5.17h6A3.17 3.17 0 0 0 35 28.5V8.25c0-.84-.33-1.65-.93-2.24zM22.5 35.83c0 .46-.37.84-.83.84H4.17a.83.83 0 0 1-.84-.84V12.5c0-.46.38-.83.84-.83h12.97c.22 0 .43.08.58.23l4.53 4.43c.16.16.25.37.25.6v18.9zm3.75-7.5h4.58c.46 0 .84-.37.84-.83V8.6a.83.83 0 0 0-.25-.6l-4.58-4.47a.83.83 0 0 0-.58-.24l-12.93.04a.83.83 0 0 0-.83.84v3.75c0 .23.19.41.42.41h4.63c.84 0 1.64.33 2.23.93l5.12 5.09c.6.59.93 1.4.93 2.23v11.34c0 .23.19.41.42.41z' fill='currentColor'/%3E%3C/svg%3E");
-        left: 1.5rem;
-        top: calc(50% - 1rem);
-        width: 1.75rem;
-        height: 2rem;
+    .page-footer a.nq-button + p.nq-text-s > .nq-icon {
+        --icon-size: 1.2rem;
+        height: var(--icon-size);
+        width: var(--icon-size);
     }
 
     .use-app-button {
