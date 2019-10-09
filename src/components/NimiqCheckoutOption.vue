@@ -53,7 +53,7 @@
                 </video>
             </PageBody>
             <PageFooter>
-                <button class="nq-button-s nq-light-blue-bg" @click="goToOnboarding">Login</button>
+                <button class="nq-button-pill light-blue" @click="goToOnboarding">Login</button>
                 <a href="javascript:void(0);" class="nq-link nq-light-blue" @click="goToOnboarding">Try it now</a>
             </PageFooter>
         </template>
@@ -61,7 +61,7 @@
             <h2 class="nq-h1">Choose an Address to pay</h2>
             <div v-if="!balancesUpdating && !hasSufficientBalanceAccount" class="non-sufficient-balance">
                 <p class="nq-text nq-orange">None of your Addresses has sufficient balance.</p>
-                <a class="nq-button-s nq-light-blue-bg" href="https://nimiq.com/#exchanges" target="_blank">
+                <a class="nq-button-pill light-blue" href="https://nimiq.com/#exchanges" target="_blank">
                     <TransferIcon/> Get NIM&nbsp;
                 </a>
             </div>
@@ -425,7 +425,7 @@ export default class NimiqCheckoutOption
         font-weight: 600;
     }
 
-    .non-sufficient-balance .nq-button-s {
+    .non-sufficient-balance .nq-button-pill {
         color: white;
         line-height: 3.375rem;
     }
