@@ -36,12 +36,24 @@
             <ArrowLeftSmallIcon/>
             Cancel Payment
         </button>
+
+        <transition name="transition-fade">
+            <component :is="screenFitsDisclaimer ? 'div' : 'BottomOverlay'"
+                v-if="screenFitsDisclaimer || !disclaimerOverlayClosed"
+                class="disclaimer"
+                @close="disclaimerOverlayClosed = true"
+            >
+                <strong>Disclaimer</strong>
+                This Nimiq interface is non-custodial and solely used to bridge the customer with the merchant directly
+                (P2P). Payment and order fulfillment are sole responsibility of the customer and merchant respectively.
+            </component>
+        </transition>
     </div>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator';
-import { Carousel, ArrowLeftSmallIcon } from '@nimiq/vue-components';
+import { BottomOverlay, Carousel, ArrowLeftSmallIcon } from '@nimiq/vue-components';
 import { ParsedCheckoutRequest } from '../lib/RequestTypes';
 import BitcoinCheckoutOption from '../components/BitcoinCheckoutOption.vue';
 import EthereumCheckoutOption from '../components/EthereumCheckoutOption.vue';
@@ -53,6 +65,7 @@ import { ERROR_CANCELED } from '../lib/Constants';
 
 @Component({components: {
     ArrowLeftSmallIcon,
+    BottomOverlay,
     Carousel,
     BitcoinCheckoutOption,
     EthereumCheckoutOption,
@@ -65,12 +78,22 @@ export default class Checkout extends Vue {
     private choosenCurrency: Currency | null = null;
     private selectedCurrency: Currency = Currency.NIM;
     private availableCurrencies: Currency[] = [];
+    private disclaimerOverlayClosed: boolean = false;
+    private screenFitsDisclaimer: boolean = true;
 
     private async created() {
         const $subtitle = document.querySelector('.logo .logo-subtitle')!;
         $subtitle.textContent = 'Checkout';
         this.availableCurrencies = this.request.paymentOptions.map((option) => option.currency);
         document.title = 'Nimiq Checkout';
+
+        this._onResize = this._onResize.bind(this);
+        window.addEventListener('resize', this._onResize);
+        this._onResize();
+    }
+
+    private destroyed() {
+        window.removeEventListener('resize', this._onResize);
     }
 
     private close() {
@@ -90,6 +113,12 @@ export default class Checkout extends Vue {
         return {
             Currency,
         };
+    }
+
+    private _onResize() {
+        const minWidth = 675; // Width below which disclaimer would break into three lines.
+        const minHeight = 950; // Height at which two lines fit at bottom, also if logos over carousel shown.
+        this.screenFitsDisclaimer = window.innerWidth >= minWidth && window.innerHeight >= minHeight;
     }
 }
 </script>
@@ -119,7 +148,7 @@ export default class Checkout extends Vue {
     }
 
     .carousel >>> .payment-option {
-        padding: 4rem 0;
+        padding-bottom: 4rem;
     }
 
     .carousel >>> .currency-info {
@@ -284,5 +313,44 @@ export default class Checkout extends Vue {
 
     .carousel >>> > :not(.selected) .payment-option:not(.confirmed) video {
         opacity: 0;
+    }
+
+    .global-close {
+        margin-top: 1rem;
+    }
+
+    .disclaimer {
+        transition: opacity .3s var(--nimiq-ease);
+    }
+
+    .disclaimer:not(.bottom-overlay) {
+        position: absolute;
+        bottom: 1rem;
+        padding: 0 3rem;
+        color: #1f234859; /* nimiq-blue with .35 opacity */
+        font-size: 1.5rem;
+        line-height: 1.3;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .disclaimer > strong {
+        font-weight: bold;
+        line-height: 1;
+        letter-spacing: .1rem;
+        text-transform: uppercase;
+    }
+
+    .disclaimer.bottom-overlay > strong {
+        font-size: 1.75rem;
+        letter-spacing: .125rem;
+        opacity: .5;
+    }
+
+    @media (max-width: 1300px) {
+        .disclaimer:not(.bottom-overlay) {
+            max-width: 92rem; /* break disclaimer into 2 lines about equal in length */
+            bottom: 1.5rem;
+        }
     }
 </style>
