@@ -244,8 +244,11 @@ export default class NonNimiqCheckoutOption<
         animation: unset; /* disable animation while hidden to avoid unnecessary rendering layers */
     }
 
-    .payment-option .page-body {
+    .payment-option .small-page {
         width: 52.5rem;
+    }
+
+    .payment-option .page-body {
         padding-top: 0;
         padding-bottom: 0;
     }
