@@ -144,6 +144,17 @@ export default class Checkout extends Vue {
         margin-top: -16.125rem; /* currency-info height */
     }
 
+    .carousel >>> .nq-card {
+        transition: transform .5s var(--nimiq-ease);
+    }
+    .carousel >>> > :not(.selected) .left .nq-card {
+        transform: translateX(8rem);
+    }
+
+    .carousel >>> > :not(.selected) .right .nq-card {
+        transform: translateX(-8rem);
+    }
+
     .carousel >>> .payment-option {
         padding: 4rem 0;
     }
@@ -209,6 +220,14 @@ export default class Checkout extends Vue {
             /* 56px for mobile browser address bar */
             /* 7.5rem for Nimiq logo & cancel button */
             height: calc(100vh - 7.5rem - 56px);
+        }
+    }
+
+    @media (max-width: 450px) {
+        .carousel >>> .nq-card {
+            width: 100vw;
+            max-width: none;
+            margin: 0;
         }
     }
 
@@ -358,14 +377,5 @@ export default class Checkout extends Vue {
 
     .carousel >>> > :not(.selected) .payment-option:not(.confirmed) video {
         opacity: 0;
-    }
-
-    /* Mobile Layout */
-    @media (max-width: 450px) {
-        .carousel >>> .nq-card {
-            width: 100vw;
-            max-width: none;
-            margin: 0;
-        }
     }
 </style>
