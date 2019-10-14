@@ -2,7 +2,7 @@ import { CurrencyCodeRecord } from 'currency-codes';
 import bigInt from 'big-integer';
 import { Currency, PaymentMethod, PaymentOptions } from '../PublicRequestTypes';
 import { ParsedPaymentOptions } from '../RequestTypes';
-import { createEthereumRequestLink, toNonScientificNumberString } from '@nimiq/utils';
+import { createEthereumRequestLink, toNonScientificNumberString, FormattableNumber } from '@nimiq/utils';
 
 export interface EtherDirectPaymentOptions  extends PaymentOptions<Currency.ETH, PaymentMethod.DIRECT> {
     protocolSpecific: {
@@ -31,6 +31,15 @@ export class ParsedEtherDirectPaymentOptions extends ParsedPaymentOptions<Curren
 
     public get fee(): bigInt.BigInteger {
         return this.protocolSpecific.gasPrice!.times(this.protocolSpecific.gasLimit!) || bigInt(0);
+    }
+
+    public get feeString(): string {
+        if (this.protocolSpecific.gasPrice) {
+            const fee = new FormattableNumber(this.protocolSpecific.gasPrice)
+                .moveDecimalSeparator(-9).toString({ maxDecimals: 2 });
+            return fee !== '0' ? `Apply a gas price of at least ${fee} gwei.` : '';
+        }
+        return '';
     }
 
     public get paymentLink() {

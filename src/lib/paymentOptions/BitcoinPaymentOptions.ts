@@ -33,6 +33,14 @@ export class ParsedBitcoinDirectPaymentOptions extends ParsedPaymentOptions<Curr
         return this.protocolSpecific.fee || 0;
     }
 
+    public get feeString(): string {
+        if (this.protocolSpecific.feePerByte) {
+            const fee = Math.ceil((this.protocolSpecific.feePerByte) * 100) / 100;
+            return fee !== 0 ? `Apply a network fee of at least ${fee} sat/byte.` : '';
+        }
+        return '';
+    }
+
     public get paymentLink() {
         if (!this.protocolSpecific.recipient) return '#';
         return createBitcoinRequestLink(this.protocolSpecific.recipient, {
