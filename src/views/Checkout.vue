@@ -12,21 +12,33 @@
                     v-if="paymentOptions.currency === Currency.NIM"
                     :paymentOptions="paymentOptions"
                     :key="paymentOptions.currency"
-                    :class="{confirmed: choosenCurrency === paymentOptions.currency}"
+                    :class="{
+                        confirmed: choosenCurrency === paymentOptions.currency,
+                        left: leftSlide === Currency.NIM,
+                        right: rightSlide === Currency.NIM
+                    }"
                     @chosen="chooseCurrency"
                     @expired="expired"/>
                 <EthereumCheckoutOption
                     v-else-if="paymentOptions.currency === Currency.ETH"
                     :paymentOptions="paymentOptions"
                     :key="paymentOptions.currency"
-                    :class="{confirmed: choosenCurrency === paymentOptions.currency}"
+                    :class="{
+                        confirmed: choosenCurrency === paymentOptions.currency,
+                        left: leftSlide === Currency.ETH,
+                        right: rightSlide === Currency.ETH
+                    }"
                     @chosen="chooseCurrency"
                     @expired="expired"/>
                 <BitcoinCheckoutOption
                     v-else-if="paymentOptions.currency === Currency.BTC"
                     :paymentOptions="paymentOptions"
                     :key="paymentOptions.currency"
-                    :class="{confirmed: choosenCurrency === paymentOptions.currency}"
+                    :class="{
+                        confirmed: choosenCurrency === paymentOptions.currency,
+                        left: leftSlide === Currency.BTC,
+                        right: rightSlide === Currency.BTC
+                    }"
                     @chosen="chooseCurrency"
                     @expired="expired"/>
             </template>
@@ -36,23 +48,36 @@
             <ArrowLeftSmallIcon/>
             Cancel Payment
         </button>
+
+        <transition name="transition-fade">
+            <component :is="screenFitsDisclaimer ? 'div' : 'BottomOverlay'"
+                v-if="screenFitsDisclaimer || !disclaimerOverlayClosed"
+                class="disclaimer"
+                @close="disclaimerOverlayClosed = true"
+            >
+                <strong>Disclaimer</strong>
+                This Nimiq interface is non-custodial and solely used to bridge the customer with the merchant directly
+                (P2P). Payment and order fulfillment are sole responsibility of the customer and merchant respectively.
+            </component>
+        </transition>
     </div>
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator';
-import { Carousel, ArrowLeftSmallIcon } from '@nimiq/vue-components';
+import { Component, Vue, Watch } from 'vue-property-decorator';
+import { BottomOverlay, Carousel, ArrowLeftSmallIcon } from '@nimiq/vue-components';
 import { ParsedCheckoutRequest } from '../lib/RequestTypes';
 import BitcoinCheckoutOption from '../components/BitcoinCheckoutOption.vue';
 import EthereumCheckoutOption from '../components/EthereumCheckoutOption.vue';
 import NimiqCheckoutOption from '../components/NimiqCheckoutOption.vue';
 import { Currency } from '../lib/PublicRequestTypes';
 import { State as RpcState } from '@nimiq/rpc';
-import staticStore, { Static } from '../lib/StaticStore';
+import { Static } from '../lib/StaticStore';
 import { ERROR_CANCELED } from '../lib/Constants';
 
 @Component({components: {
     ArrowLeftSmallIcon,
+    BottomOverlay,
     Carousel,
     BitcoinCheckoutOption,
     EthereumCheckoutOption,
@@ -64,13 +89,37 @@ export default class Checkout extends Vue {
     @Static private request!: ParsedCheckoutRequest;
     private choosenCurrency: Currency | null = null;
     private selectedCurrency: Currency = Currency.NIM;
+    private leftSlide!: Currency;
+    private rightSlide!: Currency;
     private availableCurrencies: Currency[] = [];
+    private disclaimerOverlayClosed: boolean = false;
+    private screenFitsDisclaimer: boolean = true;
+
+    @Watch('selectedCurrency', { immediate: true })
+    private updateUnselected() {
+        const entries = this.request.paymentOptions.map((paymentOptions) => paymentOptions.currency);
+        const idSelected = entries.indexOf(this.selectedCurrency);
+
+        const idLeft = idSelected === 0 ? entries.length - 1 : idSelected - 1;
+        const idRight = idSelected === entries.length - 1 ? 0 : idSelected + 1;
+
+        this.leftSlide = entries[idLeft];
+        this.rightSlide = entries[idRight];
+    }
 
     private async created() {
         const $subtitle = document.querySelector('.logo .logo-subtitle')!;
         $subtitle.textContent = 'Checkout';
         this.availableCurrencies = this.request.paymentOptions.map((option) => option.currency);
         document.title = 'Nimiq Checkout';
+
+        this._onResize = this._onResize.bind(this);
+        window.addEventListener('resize', this._onResize);
+        this._onResize();
+    }
+
+    private destroyed() {
+        window.removeEventListener('resize', this._onResize);
     }
 
     private close() {
@@ -90,6 +139,12 @@ export default class Checkout extends Vue {
         return {
             Currency,
         };
+    }
+
+    private _onResize() {
+        const minWidth = 675; // Width below which disclaimer would break into three lines.
+        const minHeight = 950; // Height at which two lines fit at bottom, also if logos over carousel shown.
+        this.screenFitsDisclaimer = window.innerWidth >= minWidth && window.innerHeight >= minHeight;
     }
 }
 </script>
@@ -114,24 +169,91 @@ export default class Checkout extends Vue {
         margin-top: -16.125rem; /* currency-info height */
     }
 
+    .carousel >>> .nq-card {
+        transition: transform .5s var(--nimiq-ease);
+    }
+    .carousel >>> > :not(.selected) .left .nq-card {
+        transform: translateX(8rem);
+    }
+
+    .carousel >>> > :not(.selected) .right .nq-card {
+        transform: translateX(-8rem);
+    }
+
     .carousel >>> .payment-option {
-        padding: 4rem 0;
+        padding-bottom: 4rem;
     }
 
     .carousel >>> .currency-info {
         display: flex;
         flex-direction: column;
         align-items: center;
-        transition: transform .5s cubic-bezier(.67,0,.16,1), opacity .25s var(--nimiq-ease);
-        transform: translateY(0rem);
+
+        --currency-info-translate-y: -7.875rem;
+        transition:
+            transform .5s cubic-bezier(.67,0,.16,1),
+            opacity .25s var(--nimiq-ease);
+        transform: scale(1) translateY(0rem);
     }
 
     .carousel >>> > :not(.selected) .currency-info {
-        transform: translateY(-7.875rem);
+        transform: scale(1) translateY(var(--currency-info-translate-y));
     }
 
     .carousel.disabled >>> .currency-info {
         opacity: 0;
+    }
+
+    /* Mobile Layout */
+    @media (max-width: 500px) {
+        .carousel >>> * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .carousel >>> .payment-option {
+            padding: 0;
+        }
+
+        .carousel >>> .currency-info {
+            --currency-info-mobile-scale: .8;
+            transform:
+                scale(var(--currency-info-mobile-scale))
+                translateY(1.4rem);
+        }
+
+        .carousel >>> > :not(.selected) .currency-info {
+            transform:
+                scale(var(--currency-info-mobile-scale))
+                translateY(var(--currency-info-translate-y));
+        }
+
+        .carousel >>> > :not(.selected) .left .currency-info {
+            transform:
+                scale(var(--currency-info-mobile-scale))
+                translateY(var(--currency-info-translate-y))
+                translateX(8rem);
+        }
+
+        .carousel >>> > :not(.selected) .right .currency-info {
+            transform:
+                scale(var(--currency-info-mobile-scale))
+                translateY(var(--currency-info-translate-y))
+                translateX(-8rem);
+        }
+
+        .carousel >>> .confirmed .nq-card {
+            /* 56px for mobile browser address bar */
+            /* 7.5rem for Nimiq logo & cancel button */
+            height: calc(100vh - 7.5rem - 56px);
+        }
+    }
+
+    @media (max-width: 450px) {
+        .carousel >>> .nq-card {
+            width: 100vw;
+            max-width: none;
+            margin: 0;
+        }
     }
 
     /* make empty padding in cards click through to cards behind */
@@ -145,39 +267,47 @@ export default class Checkout extends Vue {
     }
 
     /* Show placeholders when card is not selected */
-    .carousel >>> .timer,
-    .carousel >>> .nq-button,
-    .carousel >>> .nq-button-s,
-    .carousel >>> .nq-card > .nq-h1,
-    .carousel >>> .info-line .account,
-    .carousel >>> .info-line .amounts,
-    .carousel >>> .nq-card-body .label,
-    .carousel >>> .nq-card-body .amounts .crypto,
-    .carousel >>> .nq-card-body .amounts .fee,
-    .carousel >>> .account-list .amount,
-    .carousel >>> .nq-card-footer .nq-link,
-    .carousel >>> .account-selector .wallet-label,
-    .carousel >>> .nq-card-body .identicon-and-label,
-    .carousel >>> .account-list .identicon-and-label > *,
-    .carousel >>> .nq-card .non-sufficient-balance .nq-text {
+    .carousel >>> .payment-option:not(.confirmed) .timer,
+    .carousel >>> .payment-option:not(.confirmed) .nq-button,
+    .carousel >>> .payment-option:not(.confirmed) .nq-button-s,
+    .carousel >>> .payment-option:not(.confirmed) .nq-button-pill,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card > .nq-h1,
+    .carousel >>> .payment-option:not(.confirmed) .info-line .account,
+    .carousel >>> .payment-option:not(.confirmed) .info-line .amounts,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-body .label,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-body .amounts .crypto,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-body .amounts .fee,
+    .carousel >>> .payment-option:not(.confirmed) .account-list .amount,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-footer .nq-link,
+    .carousel >>> .payment-option:not(.confirmed) .account-selector .wallet-label,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-body .identicon-and-label,
+    .carousel >>> .payment-option:not(.confirmed) .account-list .identicon-and-label > *,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card .non-sufficient-balance .nq-text {
         position: relative;
     }
 
-    .carousel >>> .timer::after,
-    .carousel >>> .nq-button::after,
-    .carousel >>> .nq-button-s::after,
-    .carousel >>> .nq-card > .nq-h1::after,
-    .carousel >>> .info-line .account::after,
-    .carousel >>> .info-line .amounts::after,
-    .carousel >>> .nq-card-body .label::after,
-    .carousel >>> .nq-card-body .amounts .crypto::after,
-    .carousel >>> .nq-card-body .amounts .fee::after,
-    .carousel >>> .account-list .amount::after,
-    .carousel >>> .nq-card-footer .nq-link::after,
-    .carousel >>> .account-selector .wallet-label::after,
-    .carousel >>> .nq-card-body .identicon-and-label::after,
-    .carousel >>> .account-list .identicon-and-label > *::after,
-    .carousel >>> .nq-card .non-sufficient-balance .nq-text::after {
+    .carousel >>> .payment-option:not(.confirmed) .nq-button::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-button-s::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-button-pill::after {
+        transition: all .5s var(--nimiq-ease);
+    }
+
+    .carousel >>> .payment-option:not(.confirmed) .timer::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-button::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-button-s::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-button-pill::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card > .nq-h1::after,
+    .carousel >>> .payment-option:not(.confirmed) .info-line .account::after,
+    .carousel >>> .payment-option:not(.confirmed) .info-line .amounts::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-body .label::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-body .amounts .crypto::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-body .amounts .fee::after,
+    .carousel >>> .payment-option:not(.confirmed) .account-list .amount::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-footer .nq-link::after,
+    .carousel >>> .payment-option:not(.confirmed) .account-selector .wallet-label::before,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-body .identicon-and-label::after,
+    .carousel >>> .payment-option:not(.confirmed) .account-list .identicon-and-label > *::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card .non-sufficient-balance .nq-text::after {
         --placeholder-size: 100%;
         --placeholder-width: var(--placeholder-size);
         --placeholder-height: var(--placeholder-size);
@@ -191,74 +321,129 @@ export default class Checkout extends Vue {
         opacity: 0;
         border: none;
         border-radius: 500px;
-        transition: opacity .5s var(--nimiq-ease);
+        z-index: 2;
+        transition: all .5s var(--nimiq-ease);
     }
 
-    .carousel >>> .nq-card > .nq-h1::after {
+    .carousel >>> .payment-option:not(.confirmed) .nq-card > .nq-h1::after {
         --placeholder-width: 85%;
     }
 
-    .carousel >>> .info-line .amounts::after,
-    .carousel >>> .info-line .account::after {
+    .carousel >>> .payment-option:not(.confirmed) .info-line .amounts::after,
+    .carousel >>> .payment-option:not(.confirmed) .info-line .account::after,
+    .carousel >>> .payment-option:not(.confirmed) .account-selector .wallet-label::before {
         --placeholder-height: 3.25rem;
         top: initial;
         box-shadow: 0 0 0 1rem var(--nimiq-card-bg);
     }
 
-    .carousel >>> .nq-button::after,
-    .carousel >>> .nq-button-s::after {
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-button::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-button-s::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-button-pill::after {
         --placeholder-size: 105%;
     }
 
-    .carousel >>> .nq-card-body .identicon-and-label::after {
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-body .identicon-and-label::after {
         --placeholder-size: 21rem;
         top: initial;
         left: initial;
         box-shadow: 0 0 0 4rem var(--nimiq-card-bg);
     }
 
-    .carousel >>> .nq-card .non-sufficient-balance .nq-text::after {
+    .carousel >>> .payment-option:not(.confirmed) .nq-card .non-sufficient-balance .nq-text::after {
         --placeholder-width: 90%;
     }
 
-    .carousel >>> .nq-card > .nq-h1::after,
-    .carousel >>> .nq-card-body .label::after,
-    .carousel >>> .nq-card-body .amounts .crypto::after,
-    .carousel >>> .nq-card-footer .nq-link::after,
-    .carousel >>> .nq-card .non-sufficient-balance .nq-text::after {
+    .carousel >>> .payment-option:not(.confirmed) .nq-card > .nq-h1::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-body .label::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-body .amounts .crypto::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card-footer .nq-link::after,
+    .carousel >>> .payment-option:not(.confirmed) .nq-card .non-sufficient-balance .nq-text::after {
         box-shadow: 0 0 0 .6rem var(--nimiq-card-bg);
     }
 
-    .carousel >>> > :not(.selected) .timer::after,
-    .carousel >>> > :not(.selected) .nq-button::after,
-    .carousel >>> > :not(.selected) .nq-button-s::after,
-    .carousel >>> > :not(.selected) .nq-card > .nq-h1::after,
-    .carousel >>> > :not(.selected) .info-line .account::after,
-    .carousel >>> > :not(.selected) .info-line .amounts::after,
-    .carousel >>> > :not(.selected) .nq-card-body .label::after,
-    .carousel >>> > :not(.selected) .account-list .amount::after,
-    .carousel >>> > :not(.selected) .nq-card-body .amounts .crypto::after,
-    .carousel >>> > :not(.selected) .nq-card-body .amounts .fee::after,
-    .carousel >>> > :not(.selected) .nq-card-footer .nq-link::after,
-    .carousel >>> > :not(.selected) .account-selector .wallet-label::after,
-    .carousel >>> > :not(.selected) .nq-card-body .identicon-and-label::after,
-    .carousel >>> > :not(.selected) .account-list .identicon-and-label > *::after,
-    .carousel >>> > :not(.selected) .nq-card .non-sufficient-balance .nq-text::after {
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .timer::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-button::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-button-s::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-button-pill::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-card > .nq-h1::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .info-line .account::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .info-line .amounts::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-card-body .label::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .account-list .amount::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-card-body .amounts .crypto::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-card-body .amounts .fee::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-card-footer .nq-link::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .account-selector .wallet-label::before,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-card-body .identicon-and-label::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .account-list .identicon-and-label > *::after,
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-card .non-sufficient-balance .nq-text::after {
         opacity: 1;
     }
 
-    .carousel >>> > :not(.selected) .amounts {
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .amounts {
         transition: border-top-color .5s var(--nimiq-ease);
         border-top-color: var(--nimiq-card-bg);
     }
 
-    .carousel >>> > :not(.selected) .nq-button {
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .nq-button {
         transition: box-shadow .5s var(--nimiq-ease);
         box-shadow: none;
     }
 
-    .carousel >>> > :not(.selected) .arrow-runway {
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .arrow-runway {
         transition: opacity .5s var(--nimiq-ease);
         opacity: 0;
+    }
+
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) .arrow-runway * {
+        animation: unset; /* disable animation in background to avoid unnecessary rendering layers */
+    }
+
+    .carousel >>> .payment-option:not(.confirmed) video {
+        transition: opacity .5s var(--nimiq-ease);
+    }
+
+    .carousel >>> > :not(.selected) .payment-option:not(.confirmed) video {
+        opacity: 0;
+    }
+
+    .global-close {
+        margin-top: 1rem;
+    }
+
+    .disclaimer {
+        transition: opacity .3s var(--nimiq-ease);
+    }
+
+    .disclaimer:not(.bottom-overlay) {
+        position: absolute;
+        bottom: 1rem;
+        padding: 0 3rem;
+        color: #1f234859; /* nimiq-blue with .35 opacity */
+        font-size: 1.5rem;
+        line-height: 1.3;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .disclaimer > strong {
+        font-weight: bold;
+        line-height: 1;
+        letter-spacing: .1rem;
+        text-transform: uppercase;
+    }
+
+    .disclaimer.bottom-overlay > strong {
+        font-size: 1.75rem;
+        letter-spacing: .125rem;
+        opacity: .5;
+    }
+
+    @media (max-width: 1300px) {
+        .disclaimer:not(.bottom-overlay) {
+            max-width: 92rem; /* break disclaimer into 2 lines about equal in length */
+            bottom: 1.5rem;
+        }
     }
 </style>

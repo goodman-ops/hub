@@ -1,26 +1,68 @@
 <template>
     <SmallPage class="checkout-manual-payment-details nq-blue-bg">
-        <button class="nq-button-s inverse close-button" @click="$emit(constructor.Events.CLOSE)">
-            <CloseIcon/>
-        </button>
-        <p class="nq-notice info">
-            Paste the information<br/>below into your<br/>wallet app.
-        </p>
-        <CopyableField
-            v-for="entry in paymentDetails"
-            :key="entry.label"
-            :label="entry.label"
-            :value="entry.value"
+        <PaymentInfoLine v-if="rpcState"
+            ref="info"
+            theme="inverse"
+            :cryptoAmount="{
+                amount: paymentOptions.amount,
+                currency: paymentOptions.currency,
+                digits: paymentOptions.digits,
+            }"
+            :fiatAmount="request.fiatAmount && request.fiatCurrency ? {
+                amount: request.fiatAmount * 10 ** request.fiatCurrency.digits,
+                currency: request.fiatCurrency.code,
+                digits: request.fiatCurrency.digits,
+            } : null"
+            :address="paymentOptions.protocolSpecific.recipient"
+            :origin="rpcState.origin"
+            :shopLogoUrl="request.shopLogoUrl"
+            :startTime="request.time"
+            :endTime="paymentOptions.expires"
         />
+        <PageHeader backArrow @back="$emit(constructor.Events.CLOSE)">
+            Send your transaction
+        </PageHeader>
+        <PageBody>
+            <p class="nq-notice warning">
+                Don’t close this window until confirmation. <br />
+                {{ paymentOptions.feeString }}
+            </p>
+            <CopyableField
+                v-for="entry in paymentDetails"
+                :key="entry.label"
+                :label="entry.label"
+                :value="entry.value"
+            />
+        </PageBody>
     </SmallPage>
 </template>
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator';
-import { CloseIcon, CopyableField, SmallPage } from '@nimiq/vue-components';
+import {
+    CopyableField,
+    SmallPage,
+    PageHeader,
+    PageBody,
+    PaymentInfoLine,
+    UniversalAmount,
+} from '@nimiq/vue-components';
+import { State as RpcState } from '@nimiq/rpc';
+import { Static } from '../lib/StaticStore';
+import { AvailableParsedPaymentOptions, ParsedCheckoutRequest } from '../lib/RequestTypes';
+import CheckoutServerApi from '../lib/CheckoutServerApi';
 
-@Component({components: {CloseIcon, CopyableField, SmallPage}})
-class CheckoutManualPaymentDetails extends Vue {
+@Component({ components: {
+    CopyableField,
+    SmallPage,
+    PageHeader,
+    PageBody,
+    PaymentInfoLine,
+    UniversalAmount,
+}})
+class CheckoutManualPaymentDetails<
+    Parsed extends AvailableParsedPaymentOptions,
+> extends Vue {
     @Prop({
         type: Array,
         required: true,
@@ -29,6 +71,25 @@ class CheckoutManualPaymentDetails extends Vue {
                 && (['object', 'string', 'number'].includes(typeof entry.value))),
     })
     public paymentDetails!: Array<{ label: string, value: { label: string, value: string | number | object } }>;
+
+    @Prop({
+        type: Object,
+        required: true,
+    }) public paymentOptions!: Parsed;
+
+    @Static private rpcState!: RpcState;
+    @Static private request!: ParsedCheckoutRequest;
+
+    private async mounted() {
+        const paymentInfoLine = this.$refs.info as PaymentInfoLine;
+        if (!paymentInfoLine) return;
+
+        if (!this.request.callbackUrl || !this.request.csrf) {
+            throw new Error('Can\'t fetch time without callbackUrl and csrf token');
+        }
+        const serverTime = await CheckoutServerApi.fetchTime(this.request.callbackUrl, this.request.csrf);
+        paymentInfoLine.setTime(serverTime);
+    }
 }
 namespace CheckoutManualPaymentDetails { // tslint:disable-line:no-namespace
     export enum Events {
@@ -39,34 +100,33 @@ export default CheckoutManualPaymentDetails;
 </script>
 
 <style scoped>
-    .small-page {
-        padding: 4rem;
+    .page-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
 
-    .close-button {
-        align-self: flex-end;
-        font-size: 3rem;
-        line-height: 0;
-        padding: 0;
-        height: unset;
-        color: white;
-        background: transparent !important;
+    .page-body >>> p {
+        flex-basis: 9rem;
+        flex-shrink: 1;
     }
 
-    .close-button .nq-icon {
-        opacity: .2;
-        transition: opacity .3s var(--nimiq-ease);
+    .page-header {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
     }
 
-    .close-button:hover .nq-icon,
-    .close-button:focus .nq-icon,
-    .close-button:active .nq-icon {
-        opacity: .4;
+    .copyable-field >>> .nq-label {
+        margin-top: 2rem;
+    }
+
+    .page-header >>> .nq-h1 {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
     }
 
     .nq-notice {
-        margin: auto;
-        font-size: 2.5rem;
+        margin: 0;
         text-align: center;
     }
 </style>

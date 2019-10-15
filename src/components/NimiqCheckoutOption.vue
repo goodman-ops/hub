@@ -9,17 +9,18 @@
         <transition name="transition-fade">
             <StatusScreen
                 v-if="showStatusScreen"
-                :state="state"
-                :title="title"
-                :status="status"
-                :message="message"
-                @main-action="mainAction"
-                :mainAction="mainActionText"
+                :state="statusScreenState"
+                :title="statusScreenTitle"
+                :status="statusScreenStatus"
+                :message="statusScreenMessage"
+                @main-action="statusScreenMainAction"
+                :mainAction="statusScreenMainActionText"
             >
-                <template v-if="timeoutReached" v-slot:warning>
-                    <StopwatchIcon class="stopwatch-icon"/>
-                    <h1 class="title nq-h1">{{ title }}</h1>
-                    <p v-if="message" class="message nq-text">{{ message }}</p>
+                <template v-if="timeoutReached || paymentState === PaymentState.UNDERPAID" v-slot:warning>
+                    <StopwatchIcon v-if="timeoutReached" class="stopwatch-icon"/>
+                    <UnderPaymentIcon v-else class="under-payment-icon"/>
+                    <h1 class="title nq-h1">{{ statusScreenTitle }}</h1>
+                    <p v-if="statusScreenMessage" class="message nq-text">{{ statusScreenMessage }}</p>
                 </template>
             </StatusScreen>
         </transition>
@@ -46,11 +47,13 @@
         </template>
         <template v-if="wallets.length === 0">
             <h2 class="nq-h1">Imagine if paying with<br/>crypto was easy</h2>
-            <PageBody>
-                <!-- TODO -->
+            <PageBody class="video-container">
+                <video autoplay loop muted playsinline disablePictureInPicture>
+                    <source src="/checkout-demo.mp4" type="video/mp4">
+                </video>
             </PageBody>
             <PageFooter>
-                <button class="nq-button-s nq-light-blue-bg" @click="goToOnboarding">Login</button>
+                <button class="nq-button-pill light-blue" @click="goToOnboarding">Login</button>
                 <a href="javascript:void(0);" class="nq-link nq-light-blue" @click="goToOnboarding">Try it now</a>
             </PageFooter>
         </template>
@@ -58,7 +61,7 @@
             <h2 class="nq-h1">Choose an Address to pay</h2>
             <div v-if="!balancesUpdating && !hasSufficientBalanceAccount" class="non-sufficient-balance">
                 <p class="nq-text nq-orange">None of your Addresses has sufficient balance.</p>
-                <a class="nq-button-s nq-light-blue-bg" href="https://nimiq.com/#exchanges" target="_blank">
+                <a class="nq-button-pill light-blue" href="https://nimiq.com/#exchanges" target="_blank">
                     <TransferIcon/> Get NIM&nbsp;
                 </a>
             </div>
@@ -85,11 +88,12 @@ import {
     SmallPage,
     StopwatchIcon,
     TransferIcon,
+    UnderPaymentIcon,
 } from '@nimiq/vue-components';
 import { AccountInfo } from '../lib/AccountInfo';
 import { TX_VALIDITY_WINDOW } from '../lib/Constants';
 import { ContractInfo, VestingContractInfo } from '../lib/ContractInfo';
-import { Account, Currency, RequestType } from '../lib/PublicRequestTypes';
+import { Account, Currency, PaymentState, RequestType } from '../lib/PublicRequestTypes';
 import staticStore from '../lib/StaticStore';
 import { WalletInfo, WalletType } from '../lib/WalletInfo';
 import { WalletStore } from '../lib/WalletStore';
@@ -110,6 +114,7 @@ import CurrencyInfo from './CurrencyInfo.vue';
     PaymentInfoLine,
     StopwatchIcon,
     TransferIcon,
+    UnderPaymentIcon,
 }})
 export default class NimiqCheckoutOption
     extends CheckoutOption<ParsedNimiqDirectPaymentOptions> {
@@ -235,16 +240,16 @@ export default class NimiqCheckoutOption
 
     private addConsensusListeners() {
         const network = (this.$refs.network as Network);
-        network.$on(Network.Events.API_READY, () => this.status = 'Contacting seed nodes...');
-        network.$on(Network.Events.CONSENSUS_SYNCING, () => this.status = 'Syncing consensus...');
-        network.$on(Network.Events.CONSENSUS_ESTABLISHED, () => this.status = 'Requesting balances...');
+        network.$on(Network.Events.API_READY, () => this.statusScreenStatus = 'Contacting seed nodes...');
+        network.$on(Network.Events.CONSENSUS_SYNCING, () => this.statusScreenStatus = 'Syncing consensus...');
+        network.$on(Network.Events.CONSENSUS_ESTABLISHED, () => this.statusScreenStatus = 'Requesting balances...');
     }
 
     private async setAccountOrContract(walletId: string, address: string, isFromRequest = false) {
         if (!await super.selectCurrency()) return;
 
         if (this.balancesUpdating) {
-            this.state = StatusScreen.State.LOADING;
+            this.statusScreenState = StatusScreen.State.LOADING;
             this.showStatusScreen = true;
             await this.updateBalancePromise;
         }
@@ -358,6 +363,10 @@ export default class NimiqCheckoutOption
             return null;
         }
     }
+
+    private data() {
+        return { PaymentState };
+    }
 }
 </script>
 
@@ -378,6 +387,10 @@ export default class NimiqCheckoutOption
         font-size: 15.5rem;
     }
 
+    .status-screen .under-payment-icon {
+        font-size: 18.75rem;
+    }
+
     .nq-h1 {
         margin-top: 3.5rem;
         margin-bottom: 1rem;
@@ -385,8 +398,19 @@ export default class NimiqCheckoutOption
         text-align: center;
     }
 
-    a.nq-button {
-        line-height: 7.5rem;
+    .video-container {
+        position: relative;
+        padding: 0;
+        margin: 3rem 1rem 0 1rem;
+        border-radius: .5rem;
+        background: var(--nimiq-gray);
+    }
+
+    .video-container > video {
+        position: absolute;
+        height: 100%;
+        left: 50%;
+        transform: translateX(-50%);
     }
 
     .non-sufficient-balance {
@@ -401,7 +425,7 @@ export default class NimiqCheckoutOption
         font-weight: 600;
     }
 
-    .non-sufficient-balance .nq-button-s {
+    .non-sufficient-balance .nq-button-pill {
         color: white;
         line-height: 3.375rem;
     }

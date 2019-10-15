@@ -12,17 +12,18 @@
                     <transition name="transition-fade">
                         <StatusScreen
                             v-if="showStatusScreen"
-                            :state="state"
-                            :title="title"
-                            :status="status"
-                            :message="message"
-                            @main-action="mainAction"
-                            :mainAction="mainActionText"
+                            :state="statusScreenState"
+                            :title="statusScreenTitle"
+                            :status="statusScreenStatus"
+                            :message="statusScreenMessage"
+                            @main-action="statusScreenMainAction"
+                            :mainAction="statusScreenMainActionText"
                         >
-                            <template v-if="timeoutReached" v-slot:warning>
-                                <StopwatchIcon class="stopwatch-icon"/>
-                                <h1 class="title nq-h1">{{ title }}</h1>
-                                <p v-if="message" class="message nq-text">{{ message }}</p>
+                            <template v-if="timeoutReached || paymentState === PaymentState.UNDERPAID" v-slot:warning>
+                                <StopwatchIcon v-if="timeoutReached" class="stopwatch-icon"/>
+                                <UnderPaymentIcon v-else class="under-payment-icon"/>
+                                <h1 class="title nq-h1">{{ statusScreenTitle }}</h1>
+                                <p v-if="statusScreenMessage" class="message nq-text">{{ statusScreenMessage }}</p>
                             </template>
                         </StatusScreen>
                     </transition>
@@ -43,44 +44,30 @@
                         :shopLogoUrl="request.shopLogoUrl"
                         :startTime="request.time"
                         :endTime="paymentOptions.expires" />
-                    <h2 class="nq-h1" v-if="this.selected">
+                    <h1 class="nq-h1" v-if="this.selected">
                         Send your transaction
-                    </h2>
+                    </h1>
                     <PageBody v-if="!this.selected">
                         <Account layout="column"
                             :image="request.shopLogoUrl"
                             :label="rpcState.origin.split('://')[1]"/>
                         <div class="amounts">
-                            <UniversalAmount class="crypto nq-light-blue"
-                                :decimals="paymentOptions.digits"
-                                :minDecimals="paymentOptions.minDecimals"
-                                :maxDecimals="paymentOptions.digits < 8 ? paymentOptions.digits : 8"
+                            <Amount class="crypto nq-light-blue"
                                 :currency="paymentOptions.currency"
+                                :totalDecimals="paymentOptions.digits"
+                                :minDecimals="0"
+                                :maxDecimals="paymentOptions.digits < 8 ? paymentOptions.digits : 8"
                                 :amount="paymentOptions.amount"
                             />
                             <div v-if="paymentOptions.fee !== 0" class="fee">
-                                +
-                                ~<UniversalAmount v-if="paymentOptions.fee"
-                                    :decimals="paymentOptions.digits"
-                                    :minDecimals="paymentOptions.minDecimals"
-                                    :maxDecimals="paymentOptions.digits < 8 ? paymentOptions.digits : 8"
-                                    :currency="paymentOptions.currency"
-                                    :amount="paymentOptions.fee"
-                                />
-                                network fee
+                                + network fee
                             </div>
                         </div>
                     </PageBody>
                     <PageBody v-else>
-                        <p v-if="paymentOptions.fee" class="nq-notice warning">
+                        <p class="nq-notice warning">
                             Don’t close this window until confirmation. <br />
-                            Apply a network fee of at least <UniversalAmount
-                                :decimals="paymentOptions.digits"
-                                :minDecimals="paymentOptions.digits"
-                                :maxDecimals="paymentOptions.digits"
-                                :currency="paymentOptions.currency"
-                                :amount="paymentOptions.fee"
-                            />.
+                            {{ paymentOptions.feeString }}
                         </p>
                         <QrCode
                             :data="paymentOptions.paymentLink"
@@ -119,6 +106,7 @@
                 <CheckoutManualPaymentDetails
                     v-if="manualPaymentDetailsOpen"
                     :paymentDetails="manualPaymentDetails"
+                    :paymentOptions="paymentOptions"
                     @close="manualPaymentDetailsOpen = false"
                 />
             </transition>
@@ -131,15 +119,16 @@ import { Component } from 'vue-property-decorator';
 import {
     Account,
     CaretRightSmallIcon,
-    CloseIcon,
     PageBody,
     PageFooter,
     PaymentInfoLine,
     QrCode,
     SmallPage,
     StopwatchIcon,
-    UniversalAmount,
+    UnderPaymentIcon,
+    Amount,
 } from '@nimiq/vue-components';
+import { PaymentState } from '../lib/PublicRequestTypes';
 import { AvailableParsedPaymentOptions } from '../lib/RequestTypes';
 import CheckoutOption from './CheckoutOption.vue';
 import CurrencyInfo from './CurrencyInfo.vue';
@@ -150,7 +139,6 @@ import CheckoutManualPaymentDetails from './CheckoutManualPaymentDetails.vue';
     Account,
     CaretRightSmallIcon,
     CheckoutManualPaymentDetails,
-    CloseIcon,
     CurrencyInfo,
     PageBody,
     PageFooter,
@@ -159,7 +147,8 @@ import CheckoutManualPaymentDetails from './CheckoutManualPaymentDetails.vue';
     SmallPage,
     StatusScreen,
     StopwatchIcon,
-    UniversalAmount,
+    UnderPaymentIcon,
+    Amount,
 }})
 export default class NonNimiqCheckoutOption<
     Parsed extends AvailableParsedPaymentOptions
@@ -187,7 +176,7 @@ export default class NonNimiqCheckoutOption<
 
     protected async selectCurrency() {
         if (this.request.callbackUrl) {
-            this.state = StatusScreen.State.LOADING;
+            this.statusScreenState = StatusScreen.State.LOADING;
             this.showStatusScreen = true;
         }
         if (!await super.selectCurrency()) return false;
@@ -196,6 +185,21 @@ export default class NonNimiqCheckoutOption<
             this.lastPaymentState = await this.getState();
         }, 10000);
         return true;
+    }
+
+    protected timedOut() {
+        this.manualPaymentDetailsOpen = false;
+        super.timedOut();
+    }
+
+    protected showSuccessScreen() {
+        this.manualPaymentDetailsOpen = false;
+        super.showSuccessScreen();
+    }
+
+    protected showUnderpaidWarningScreen() {
+        this.manualPaymentDetailsOpen = false;
+        super.showUnderpaidWarningScreen();
     }
 
     protected checkBlur() {
@@ -207,6 +211,10 @@ export default class NonNimiqCheckoutOption<
             window.clearTimeout(blurTimeout);
             window.onblur = null;
         };
+    }
+
+    private data() {
+        return { PaymentState };
     }
 }
 </script>
@@ -254,6 +262,10 @@ export default class NonNimiqCheckoutOption<
         font-size: 15.5rem;
     }
 
+    .status-screen .under-payment-icon {
+        font-size: 18.75rem;
+    }
+
     .payment-option .page-body {
         display: flex;
         flex-direction: column;
@@ -277,6 +289,14 @@ export default class NonNimiqCheckoutOption<
     .payment-option:not(.confirmed) .info-line >>> > :not(.timer):not(.amounts) {
         opacity: 0;
         pointer-events: none;
+    }
+
+    .payment-option:not(.confirmed) .info-line >>> > .arrow-runway * {
+        animation: unset; /* disable animation while hidden to avoid unnecessary rendering layers */
+    }
+
+    .payment-option .small-page {
+        width: 52.5rem;
     }
 
     .payment-option .account,

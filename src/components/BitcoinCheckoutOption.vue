@@ -12,8 +12,8 @@ export default class BitcoinCheckoutOption
         const paymentDetails = [ ...super.manualPaymentDetails, {
             label: 'Amount',
             value: {
-                BTC: moveComma(this.paymentOptions.amount, -this.paymentOptions.digits),
                 mBTC: moveComma(this.paymentOptions.amount, -this.paymentOptions.digits + 3),
+                BTC: moveComma(this.paymentOptions.amount, -this.paymentOptions.digits),
             },
         }];
         if (this.paymentOptions.protocolSpecific.feePerByte || this.paymentOptions.protocolSpecific.fee) {
