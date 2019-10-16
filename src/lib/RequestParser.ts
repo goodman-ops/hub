@@ -1,9 +1,4 @@
-import {
-    TX_VALIDITY_WINDOW,
-    TX_MIN_VALIDITY_DURATION,
-    isMilliseconds,
-    HISTORY_KEY_SELECTED_CURRENCY,
-} from './Constants';
+import { HISTORY_KEY_SELECTED_CURRENCY, isMilliseconds } from './Constants';
 import { State } from '@nimiq/rpc';
 import {
     BasicRequest,
@@ -19,6 +14,8 @@ import {
     Currency,
     PaymentMethod,
     RequestType,
+    NimiqCheckoutRequest,
+    MultiCurrencyCheckoutRequest,
 } from './PublicRequestTypes';
 import {
     ParsedBasicRequest,
@@ -31,8 +28,6 @@ import {
     ParsedRenameRequest,
     ParsedExportRequest,
     ParsedRpcRequest,
-    ExtendedRpcRequest,
-    ExtendedCheckoutRequest,
 } from './RequestTypes';
 import { ParsedNimiqDirectPaymentOptions } from './paymentOptions/NimiqPaymentOptions';
 import { ParsedEtherDirectPaymentOptions } from './paymentOptions/EtherPaymentOptions';
@@ -42,7 +37,7 @@ import { Utf8Tools } from '@nimiq/utils';
 
 export class RequestParser {
     public static parse(
-            request: RpcRequest | ExtendedRpcRequest,
+            request: RpcRequest,
             requestType: RequestType,
             state?: State,
         ): ParsedRpcRequest | null {
@@ -106,6 +101,7 @@ export class RequestParser {
 
                     return {
                         kind: RequestType.CHECKOUT,
+                        version: 1,
                         appName: checkoutRequest.appName,
                         shopLogoUrl: checkoutRequest.shopLogoUrl,
                         data,
@@ -121,7 +117,7 @@ export class RequestParser {
                                 sender: checkoutRequest.sender,
                                 forceSender: !!checkoutRequest.forceSender,
                                 fee: checkoutRequest.fee || 0,
-                                flags: checkoutRequest.flags,
+                                flags: checkoutRequest.flags || Nimiq.Transaction.Flag.NONE,
                                 validityDuration: checkoutRequest.validityDuration,
                             },
                         }, data)],
@@ -187,6 +183,7 @@ export class RequestParser {
 
                         return {
                             kind: RequestType.CHECKOUT,
+                            version: 2,
                             appName: checkoutRequest.appName,
                             shopLogoUrl: checkoutRequest.shopLogoUrl,
                             callbackUrl: checkoutRequest.callbackUrl,
@@ -312,7 +309,7 @@ export class RequestParser {
     }
 
     public static raw(request: ParsedRpcRequest)
-        : RpcRequest | ExtendedRpcRequest | null {
+        : RpcRequest | null {
         switch (request.kind) {
             case RequestType.SIGN_TRANSACTION:
                 const signTransactionRequest = request as ParsedSignTransactionRequest;
@@ -342,25 +339,57 @@ export class RequestParser {
                 } as CashlinkRequest;
             case RequestType.CHECKOUT:
                 const checkoutRequest = request as ParsedCheckoutRequest;
-                return {
-                    appName: checkoutRequest.appName,
-                    version: 2,
-                    shopLogoUrl: checkoutRequest.shopLogoUrl,
-                    extraData: checkoutRequest.data,
-                    callbackUrl: checkoutRequest.callbackUrl,
-                    csrf: checkoutRequest.csrf,
-                    time: checkoutRequest.time,
-                    fiatAmount: checkoutRequest.fiatAmount ? checkoutRequest.fiatAmount : undefined,
-                    fiatCurrency: checkoutRequest.fiatCurrency ? checkoutRequest.fiatCurrency.code : undefined,
-                    paymentOptions: checkoutRequest.paymentOptions.map((option) => {
-                        switch (option.type) {
-                            case PaymentMethod.DIRECT:
-                                return option.raw();
-                            default:
-                                throw new Error('paymentOption.type not supported');
-                        }
-                    }),
-                } as ExtendedCheckoutRequest;
+                switch (checkoutRequest.version) {
+                    case 1:
+                        return {
+                            appName: checkoutRequest.appName,
+                            version: 1,
+                            shopLogoUrl: checkoutRequest.shopLogoUrl,
+                            sender: (checkoutRequest.paymentOptions[0] as ParsedNimiqDirectPaymentOptions)
+                                .protocolSpecific.sender
+                                ? (checkoutRequest.paymentOptions[0] as ParsedNimiqDirectPaymentOptions)
+                                    .protocolSpecific.sender!.toUserFriendlyAddress()
+                                : undefined,
+                            forceSender: (checkoutRequest.paymentOptions[0] as ParsedNimiqDirectPaymentOptions)
+                                .protocolSpecific.forceSender,
+                            recipient: (checkoutRequest.paymentOptions[0] as ParsedNimiqDirectPaymentOptions)
+                                .protocolSpecific.recipient
+                                ? (checkoutRequest.paymentOptions[0] as ParsedNimiqDirectPaymentOptions)
+                                    .protocolSpecific.recipient!.toUserFriendlyAddress()
+                                : undefined,
+                            recipientType:
+                                (checkoutRequest.paymentOptions[0] as ParsedNimiqDirectPaymentOptions)
+                                    .protocolSpecific.recipientType,
+                            value: (checkoutRequest.paymentOptions[0] as ParsedNimiqDirectPaymentOptions).amount,
+                            fee: (checkoutRequest.paymentOptions[0] as ParsedNimiqDirectPaymentOptions)
+                                .protocolSpecific.fee,
+                            extraData: checkoutRequest.data,
+                            flags: (checkoutRequest.paymentOptions[0] as ParsedNimiqDirectPaymentOptions)
+                                .protocolSpecific.flags,
+                            validityDuration: (checkoutRequest.paymentOptions[0] as ParsedNimiqDirectPaymentOptions)
+                                    .protocolSpecific.validityDuration,
+                        } as NimiqCheckoutRequest;
+                    case 2:
+                        return {
+                            appName: checkoutRequest.appName,
+                            version: 2,
+                            shopLogoUrl: checkoutRequest.shopLogoUrl,
+                            extraData: checkoutRequest.data,
+                            callbackUrl: checkoutRequest.callbackUrl,
+                            csrf: checkoutRequest.csrf,
+                            time: checkoutRequest.time,
+                            fiatAmount: checkoutRequest.fiatAmount ? checkoutRequest.fiatAmount : undefined,
+                            fiatCurrency: checkoutRequest.fiatCurrency ? checkoutRequest.fiatCurrency.code : undefined,
+                            paymentOptions: checkoutRequest.paymentOptions.map((option) => {
+                                switch (option.type) {
+                                    case PaymentMethod.DIRECT:
+                                        return option.raw();
+                                    default:
+                                        throw new Error('paymentOption.type not supported');
+                                }
+                            }),
+                        } as MultiCurrencyCheckoutRequest;
+                    }
             case RequestType.ONBOARD:
                 const onboardRequest = request as ParsedOnboardRequest;
                 return {

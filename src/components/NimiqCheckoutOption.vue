@@ -49,7 +49,9 @@
             <h2 class="nq-h1">Imagine if paying with<br/>crypto was easy</h2>
             <PageBody class="video-container">
                 <video autoplay loop muted playsinline disablePictureInPicture>
-                    <source src="/checkout-demo.mp4" type="video/mp4">
+                    <source src="/checkout-demo.mp4#t=0.7" type="video/mp4">
+                    <!-- have video start at .7s to have a meaningful preview image rendered for mobile browsers that
+                    don't autoplay. Note this only applies to the first play, loops will start at 0. -->
                 </video>
             </PageBody>
             <PageFooter>
