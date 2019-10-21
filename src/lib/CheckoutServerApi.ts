@@ -70,6 +70,7 @@ export default class CheckoutServerApi {
                 value.time = isMilliseconds(value.time) ? value.time : value.time * 1000;
                 return value;
             },
+            () => CheckoutServerApi._getStatePromises.delete(currency),
         );
         CheckoutServerApi._getStatePromises.set(currency, fetchedDataPromise);
 

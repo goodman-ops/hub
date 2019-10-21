@@ -231,6 +231,11 @@ export default class NonNimiqCheckoutOption<
         margin-right: 2rem;
     }
 
+    .payment-option .small-page {
+        position: relative;
+        width: 52.5rem;
+    }
+
     .payment-option .nq-card-wrapper {
         position: relative;
     }
@@ -275,10 +280,6 @@ export default class NonNimiqCheckoutOption<
         animation: unset; /* avoid unnecessary rendering layers caused by arrow animation which mess with the flip */
     }
 
-    .small-page {
-        position: relative;
-    }
-
     .status-screen {
         position: absolute;
         left: 0;
@@ -299,7 +300,6 @@ export default class NonNimiqCheckoutOption<
         flex-direction: column;
         align-items: center;
         justify-content: space-around;
-        width: 52.5rem;
         padding-top: 0;
         padding-bottom: 0;
         text-align: center;
