@@ -25,7 +25,7 @@ import { WalletStore } from './WalletStore';
 import { WalletType } from '@/lib/WalletInfo';
 import Cashlink from '@/lib/Cashlink';
 import CookieJar from '@/lib/CookieJar';
-import { Raven } from 'vue-raven'; // Sentry.io SDK
+import { captureException } from '@sentry/browser';
 import { ERROR_CANCELED } from './Constants';
 import Config from 'config';
 
@@ -121,7 +121,7 @@ export default class RpcApi {
         if (ignoredErrorTypes.indexOf(error.name) < 0 && ignoredErrors.indexOf(error.message) < 0) {
             if (Config.reportToSentry) {
                 console.debug('Request:', JSON.stringify(this._staticStore.request));
-                Raven.captureException(error);
+                captureException(error);
             }
         }
 
