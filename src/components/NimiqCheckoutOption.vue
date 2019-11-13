@@ -8,7 +8,7 @@
     <SmallPage>
         <transition name="transition-fade">
             <StatusScreen
-                v-if="showStatusScreen"
+                v-if="delayedShowStatusScreen"
                 :state="statusScreenState"
                 :title="statusScreenTitle"
                 :status="statusScreenStatus"
@@ -56,7 +56,10 @@
             </PageBody>
             <PageFooter>
                 <button class="nq-button-pill light-blue" @click="goToOnboarding">Login</button>
-                <a href="javascript:void(0);" class="nq-link nq-light-blue" @click="goToOnboarding">Try it now</a>
+                <a :href="safeOnboardingLink" target="_blank" class="safe-onboarding-link nq-link nq-light-blue">
+                    Try it now
+                    <ArrowRightSmallIcon/>
+                </a>
             </PageFooter>
         </template>
         <template v-else>
@@ -79,11 +82,12 @@
 </template>
 
 <script lang="ts">
-import { Component } from 'vue-property-decorator';
+import { Component, Watch } from 'vue-property-decorator';
 import { State, Mutation, Getter } from 'vuex-class';
 import KeyguardClient from '@nimiq/keyguard-client';
 import {
     AccountSelector,
+    ArrowRightSmallIcon,
     PageBody,
     PageFooter,
     PaymentInfoLine,
@@ -114,6 +118,7 @@ import CurrencyInfo from './CurrencyInfo.vue';
     SmallPage,
     StatusScreen,
     PaymentInfoLine,
+    ArrowRightSmallIcon,
     StopwatchIcon,
     TransferIcon,
     UnderPaymentIcon,
@@ -132,9 +137,14 @@ export default class NimiqCheckoutOption
         userFriendlyAddress: string,
     }) => any;
 
+    private readonly safeOnboardingLink: string
+        = `https://safe.nimiq${location.hostname.endsWith('testnet.com') ? '-testnet' : ''}.com/?onboarding=signup`;
+
     private updateBalancePromise: Promise<void> | null = null;
     private balancesUpdating: boolean = true;
     private height: number = 0;
+    private delayedShowStatusScreen: boolean = this.showStatusScreen;
+    private _delayedHideStatusScreenTimeout: number = -1;
 
     protected async created() {
         if (this.paymentOptions.currency !== Currency.NIM) {
@@ -172,6 +182,21 @@ export default class NimiqCheckoutOption
 
     protected destroyed() {
         super.destroyed();
+    }
+
+    @Watch('showStatusScreen')
+    private _delayShowStatusScreen(showStatusScreen: boolean) {
+        if (showStatusScreen) {
+            // show status screen immediately
+            clearTimeout(this._delayedHideStatusScreenTimeout);
+            this.delayedShowStatusScreen = true;
+        } else {
+            // Hide status screen after a delay to avoid flickering when showStatusScreen is false just for a short
+            // moment before the status screen should be shown again. This is the case in setAccountOrContract when
+            // switching from the fetchPaymentOption (in selectCurrency) status screen to the balance update status
+            // screen and then to the redirect loading spinner
+            this._delayedHideStatusScreenTimeout = window.setTimeout(() => this.delayedShowStatusScreen = false, 100);
+        }
     }
 
     private async getBalances(): Promise<Map<string, number>> {
@@ -248,10 +273,12 @@ export default class NimiqCheckoutOption
     }
 
     private async setAccountOrContract(walletId: string, address: string, isFromRequest = false) {
+        const startTime = Date.now();
         if (!await super.selectCurrency()) return;
 
         if (this.balancesUpdating) {
             this.statusScreenState = StatusScreen.State.LOADING;
+            this.statusScreenTitle = 'Updating balances';
             this.showStatusScreen = true;
             await this.updateBalancePromise;
         }
@@ -276,6 +303,17 @@ export default class NimiqCheckoutOption
             walletId: senderAccount.id,
             userFriendlyAddress: (senderContract || signer).userFriendlyAddress,
         });
+
+        // If checkout carousel has multiple cards give it some time to run the card selection animation before
+        // redirecting to Keyguard or Ledger flow.
+        const waitTime = 400 - (Date.now() - startTime);
+        if (waitTime > 0 && this.request.paymentOptions.length > 1) {
+            // If a loading screen was shown for fetchPaymentoption (in selectCurrency) or the balance update,
+            // keep it artificially open until the redirect
+            this.showStatusScreen = this.showStatusScreen
+                || this.statusScreenState === StatusScreen.State.LOADING && !!this.statusScreenTitle;
+            await new Promise((resolve) => setTimeout(resolve, waitTime));
+        }
 
         // proceed to transaction signing
         switch (senderAccount.type) {
@@ -413,6 +451,24 @@ export default class NimiqCheckoutOption
         height: 100%;
         left: 50%;
         transform: translateX(-50%);
+    }
+
+    .safe-onboarding-link {
+        margin-bottom: .25rem;
+        align-self: center;
+        font-size: 2rem;
+        font-weight: bold;
+        text-decoration: none;
+    }
+
+    .safe-onboarding-link .nq-icon {
+        margin-left: .25rem;
+        font-size: 1.5rem;
+        transition: transform .3s var(--nimiq-ease);
+    }
+
+    .safe-onboarding-link:hover .nq-icon {
+        transform: translateX(.25rem);
     }
 
     .non-sufficient-balance {

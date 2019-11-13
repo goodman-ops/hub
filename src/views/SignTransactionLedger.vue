@@ -76,9 +76,14 @@
                     <StatusScreen v-if="state !== constructor.State.OVERVIEW"
                         :state="statusScreenState"
                         :title="statusScreenTitle"
-                        :message="state === constructor.State.EXPIRED
-                            ? 'Please go back to the shop and restart the process.'
-                            : ''">
+                        :mainAction="state === constructor.State.EXPIRED ? 'Go back to shop' : null"
+                        @main-action="_close"
+                    >
+                        <template v-if="state === constructor.State.EXPIRED" v-slot:warning>
+                            <StopwatchIcon class="stopwatch-icon"/>
+                            <h1 class="title nq-h1">{{ statusScreenTitle }}</h1>
+                            <p class="message nq-text">Please go back to the shop and restart the process.</p>
+                        </template>
                     </StatusScreen>
                 </transition>
             </div>
@@ -116,6 +121,7 @@ import {
     PageHeader,
     PaymentInfoLine,
     SmallPage,
+    StopwatchIcon,
 } from '@nimiq/vue-components';
 import Network from '../components/Network.vue';
 import LedgerApi from '../lib/LedgerApi';
@@ -127,7 +133,7 @@ import { State as RpcState } from '@nimiq/rpc';
 import { ParsedCashlinkRequest, ParsedCheckoutRequest, ParsedSignTransactionRequest } from '../lib/RequestTypes';
 import { Currency, RequestType } from '../lib/PublicRequestTypes';
 import { WalletInfo } from '../lib/WalletInfo';
-import { CASHLINK_FUNDING_DATA, ERROR_CANCELED, TX_VALIDITY_WINDOW } from '../lib/Constants';
+import { CASHLINK_FUNDING_DATA, ERROR_CANCELED, ERROR_REQUEST_TIMED_OUT, TX_VALIDITY_WINDOW } from '../lib/Constants';
 import { ParsedNimiqDirectPaymentOptions } from '../lib/paymentOptions/NimiqPaymentOptions';
 import { Utf8Tools } from '@nimiq/utils';
 import Config from 'config';
@@ -157,6 +163,7 @@ interface AccountDetailsData {
     Amount,
     ArrowLeftSmallIcon,
     ArrowRightIcon,
+    StopwatchIcon,
 }})
 export default class SignTransactionLedger extends Vue {
     private static readonly State = {
@@ -175,6 +182,7 @@ export default class SignTransactionLedger extends Vue {
     private senderDetails: AccountDetailsData = { address: '', label: '' };
     private recipientDetails: AccountDetailsData = { address: '', label: ''};
     private shownAccountDetails: AccountDetailsData | null = null;
+    private _checkoutExpiryTimeout: number = -1;
 
     private async mounted() {
         const network = this.$refs.network as Network;
@@ -243,7 +251,7 @@ export default class SignTransactionLedger extends Vue {
 
             // synchronize time in background
             if (checkoutPaymentOptions.expires) {
-                this._initializeCheckoutTimer().catch((e) => this.$rpc.reject(e));
+                this._initializeCheckoutExpiryTimer().catch((e) => this.$rpc.reject(e));
             }
         } else if (this.request.kind === RequestType.CASHLINK) {
             // coming from cashlink create
@@ -308,8 +316,20 @@ export default class SignTransactionLedger extends Vue {
             // message displayed.
             if (this.state !== SignTransactionLedger.State.EXPIRED
                 && e.message.toLowerCase().indexOf('cancelled') !== -1) {
-                if (this.request.kind === RequestType.CHECKOUT || this.request.kind === RequestType.CASHLINK) {
-                    this._back(); // user might want to choose another account or address or change cashlink
+                const isCheckoutRequestWithManuallySelectedAddress = this.request.kind === RequestType.CHECKOUT
+                    && (
+                        !this.checkoutPaymentOptions!.protocolSpecific.sender
+                        || !sender.equals(this.checkoutPaymentOptions!.protocolSpecific.sender)
+                    );
+                const isCashlinkRequestWithManuallySelectedAddress = this.request.kind === RequestType.CASHLINK
+                    && (
+                        !(this.request as ParsedCashlinkRequest).senderAddress
+                        || !sender.equals((this.request as ParsedCashlinkRequest).senderAddress!)
+                    );
+                if (isCheckoutRequestWithManuallySelectedAddress || isCashlinkRequestWithManuallySelectedAddress) {
+                    // If user got here after selecting an account in the checkout or cashlink flow (which was not
+                    // automatically selected via the request) he might want to switch to another one
+                    this._back();
                 } else {
                     this._close();
                 }
@@ -340,6 +360,7 @@ export default class SignTransactionLedger extends Vue {
     }
 
     private destroyed() {
+        clearTimeout(this._checkoutExpiryTimeout);
         this._cancelLedgerRequest();
     }
 
@@ -407,7 +428,7 @@ export default class SignTransactionLedger extends Vue {
         }
     }
 
-    private async _initializeCheckoutTimer() {
+    private async _initializeCheckoutExpiryTimer() {
         if (!this.checkoutPaymentOptions || !this.checkoutPaymentOptions.expires) return;
         const checkoutRequest = this.request as ParsedCheckoutRequest;
         if (!checkoutRequest.callbackUrl || !checkoutRequest.csrf) {
@@ -415,7 +436,8 @@ export default class SignTransactionLedger extends Vue {
         }
         const referenceTime = await CheckoutServerApi.fetchTime(checkoutRequest.callbackUrl, checkoutRequest.csrf);
         (this.$refs.info as PaymentInfoLine).setTime(referenceTime);
-        window.setTimeout(
+        clearTimeout(this._checkoutExpiryTimeout);
+        this._checkoutExpiryTimeout = window.setTimeout(
             () => {
                 this.shownAccountDetails = null;
                 this.state = SignTransactionLedger.State.EXPIRED;
@@ -430,8 +452,10 @@ export default class SignTransactionLedger extends Vue {
     }
 
     private _close() {
-        if (this.state !== SignTransactionLedger.State.OVERVIEW) return;
-        this.$rpc.reject(new Error(ERROR_CANCELED));
+        if (this.state !== SignTransactionLedger.State.OVERVIEW
+            && this.state !== SignTransactionLedger.State.EXPIRED) return;
+        const error = this.state === SignTransactionLedger.State.EXPIRED ? ERROR_REQUEST_TIMED_OUT : ERROR_CANCELED;
+        this.$rpc.reject(new Error(error));
     }
 
     private _cancelLedgerRequest() {
@@ -466,7 +490,7 @@ export default class SignTransactionLedger extends Vue {
 
     .info-line {
         align-self: stretch;
-        margin: -2rem 0 4.5rem;
+        margin: -2rem -1.5rem 3rem;
     }
 
     .page-header {
@@ -575,6 +599,10 @@ export default class SignTransactionLedger extends Vue {
 
     .status-screen {
         transition: opacity .4s;
+    }
+
+    .status-screen .stopwatch-icon {
+        font-size: 15.5rem;
     }
 
     .account-details {

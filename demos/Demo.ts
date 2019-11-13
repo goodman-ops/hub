@@ -117,7 +117,12 @@ class Demo {
         document.querySelector('button#sign-transaction').addEventListener('click', async () => {
             const txRequest = generateSignTransactionRequest();
             try {
-                const result = await demo.client.signTransaction(txRequest, demo._defaultBehavior);
+                const result = await demo.client.signTransaction(
+                    new Promise<SignTransactionRequest>((resolve) => {
+                        window.setTimeout(() => resolve(txRequest), 2000);
+                    }),
+                    demo._defaultBehavior,
+                );
                 console.log('Result', result);
                 document.querySelector('#result').textContent = 'TX signed';
             } catch (e) {

@@ -16,7 +16,7 @@ export abstract class RequestBehavior<B extends BehaviorType> {
     public async request<R extends RequestType>(
         endpoint: string,
         command: R,
-        args: any[],
+        args: Iterable<PromiseLike<any> | any>,
     ): Promise<B extends BehaviorType.REDIRECT ? void : ResultByRequestType<R>> {
         throw new Error('Not implemented');
     }
@@ -51,7 +51,7 @@ export class RedirectRequestBehavior extends RequestBehavior<BehaviorType.REDIRE
     public async request<R extends RequestType>(
         endpoint: string,
         command: R,
-        args: any[],
+        args: Iterable<PromiseLike<any> | any>,
     ): Promise<void> {
         const origin = RequestBehavior.getAllowedOrigin(endpoint);
 
@@ -59,7 +59,7 @@ export class RedirectRequestBehavior extends RequestBehavior<BehaviorType.REDIRE
         await client.init();
 
         const state: object = Object.assign({}, this._localState, { __command: command });
-        client.callAndSaveLocalState(this._returnUrl, state, command, true, ...args);
+        client.callAndSaveLocalState(this._returnUrl, state, command, true, ...(await Promise.all(args)));
     }
 }
 
@@ -75,7 +75,7 @@ export class PopupRequestBehavior extends RequestBehavior<BehaviorType.POPUP> {
     public async request<R extends RequestType>(
         endpoint: string,
         command: R,
-        args: any[],
+        args: Iterable<PromiseLike<any> | any>,
     ): Promise<ResultByRequestType<R>> {
         const origin = RequestBehavior.getAllowedOrigin(endpoint);
 
@@ -84,7 +84,7 @@ export class PopupRequestBehavior extends RequestBehavior<BehaviorType.POPUP> {
         await client.init();
 
         try {
-            return await client.call(command, ...args);
+            return await client.call(command, ...(await Promise.all(args)));
         } catch (e) {
             throw e;
         } finally {
@@ -117,7 +117,7 @@ export class IFrameRequestBehavior extends RequestBehavior<BehaviorType.IFRAME> 
     public async request<R extends RequestType>(
         endpoint: string,
         command: R,
-        args: any[],
+        args: Iterable<PromiseLike<any> | any>,
     ): Promise<ResultByRequestType<R>> {
         if (this._iframe && this._iframe.src !== `${endpoint}${IFrameRequestBehavior.IFRAME_PATH_SUFFIX}`) {
             throw new Error('Hub iframe is already opened with another endpoint');
@@ -137,7 +137,7 @@ export class IFrameRequestBehavior extends RequestBehavior<BehaviorType.IFRAME> 
             await this._client.init();
         }
 
-        return await this._client.call(command, ...args);
+        return await this._client.call(command, ...(await Promise.all(args)));
     }
 
     public async createIFrame(endpoint: string): Promise<HTMLIFrameElement> {

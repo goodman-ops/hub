@@ -1,7 +1,7 @@
 <script lang="ts">
 import { ParsedEtherDirectPaymentOptions } from '../lib/paymentOptions/EtherPaymentOptions';
 import NonNimiqCheckoutOption from './NonNimiqCheckoutOption.vue';
-import { moveComma, round } from '@nimiq/utils';
+import { FormattableNumber } from '@nimiq/utils';
 
 export default class EtherCheckoutOption
     extends NonNimiqCheckoutOption<ParsedEtherDirectPaymentOptions> {
@@ -12,15 +12,18 @@ export default class EtherCheckoutOption
         const paymentDetails = [ ...super.manualPaymentDetails, {
             label: 'Amount',
             value: {
-                ETH: moveComma(this.paymentOptions.amount, -this.paymentOptions.digits),
+                ETH: new FormattableNumber(this.paymentOptions.amount)
+                    .moveDecimalSeparator(-this.paymentOptions.digits).toString(),
             },
         }];
         if (this.paymentOptions.protocolSpecific.gasPrice) {
             paymentDetails.push({
                 label: 'Gas Price',
                 value: {
-                    GWEI: round(moveComma(this.paymentOptions.protocolSpecific.gasPrice, -9), 2),
-                    ETH: moveComma(this.paymentOptions.protocolSpecific.gasPrice, -this.paymentOptions.digits),
+                    GWEI: new FormattableNumber(this.paymentOptions.protocolSpecific.gasPrice)
+                        .moveDecimalSeparator(-9).toString({ maxDecimals: 2 }),
+                    ETH: new FormattableNumber(this.paymentOptions.protocolSpecific.gasPrice)
+                        .moveDecimalSeparator(-this.paymentOptions.digits).toString(),
                 },
             });
         }

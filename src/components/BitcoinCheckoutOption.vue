@@ -1,7 +1,7 @@
 <script lang="ts">
 import { ParsedBitcoinDirectPaymentOptions } from '../lib/paymentOptions/BitcoinPaymentOptions';
 import NonNimiqCheckoutOption from './NonNimiqCheckoutOption.vue';
-import { moveComma } from '@nimiq/utils';
+import { FormattableNumber } from '@nimiq/utils';
 
 export default class BitcoinCheckoutOption
     extends NonNimiqCheckoutOption<ParsedBitcoinDirectPaymentOptions> {
@@ -12,8 +12,10 @@ export default class BitcoinCheckoutOption
         const paymentDetails = [ ...super.manualPaymentDetails, {
             label: 'Amount',
             value: {
-                mBTC: moveComma(this.paymentOptions.amount, -this.paymentOptions.digits + 3),
-                BTC: moveComma(this.paymentOptions.amount, -this.paymentOptions.digits),
+                mBTC: new FormattableNumber(this.paymentOptions.amount)
+                    .moveDecimalSeparator(-this.paymentOptions.digits + 3).toString(),
+                BTC: new FormattableNumber(this.paymentOptions.amount)
+                    .moveDecimalSeparator(-this.paymentOptions.digits).toString(),
             },
         }];
         if (this.paymentOptions.protocolSpecific.feePerByte || this.paymentOptions.protocolSpecific.fee) {
@@ -22,7 +24,8 @@ export default class BitcoinCheckoutOption
                 fees['SAT/BYTE'] = Math.ceil(this.paymentOptions.protocolSpecific.feePerByte * 100) / 100; // rounded
             }
             if (this.paymentOptions.protocolSpecific.fee) {
-                fees.BTC = moveComma(this.paymentOptions.protocolSpecific.fee, -this.paymentOptions.digits);
+                fees.BTC = new FormattableNumber(this.paymentOptions.protocolSpecific.fee)
+                    .moveDecimalSeparator(-this.paymentOptions.digits).toString();
             }
             paymentDetails.push({
                 label: 'Fee',

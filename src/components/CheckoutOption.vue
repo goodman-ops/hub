@@ -192,6 +192,7 @@ export default class CheckoutOption<
     protected async selectCurrency() {
         window.clearTimeout(this.optionTimeout);
         this.selected = true;
+        this.$emit('chosen', this.paymentOptions.currency);
         if (this.request.callbackUrl) {
             try {
                 await this.fetchPaymentOption();
@@ -209,7 +210,6 @@ export default class CheckoutOption<
         window.history.replaceState(
             Object.assign({}, window.history.state, {[HISTORY_KEY_SELECTED_CURRENCY]: this.paymentOptions.currency}),
             '');
-        this.$emit('chosen', this.paymentOptions.currency);
         return true;
     }
 }
