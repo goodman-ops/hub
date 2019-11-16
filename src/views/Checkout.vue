@@ -46,7 +46,7 @@
 
         <button class="global-close nq-button-s" @click="close">
             <ArrowLeftSmallIcon/>
-            Cancel Payment
+            Cancel <span>Payment</span>
         </button>
     </div>
 </template>
@@ -216,6 +216,7 @@ export default class Checkout extends Vue {
             /* 56px for mobile browser address bar */
             /* 7.5rem for Nimiq logo & cancel button */
             height: calc(100vh - 7.5rem - 56px);
+            min-height: 71rem;
         }
     }
 
