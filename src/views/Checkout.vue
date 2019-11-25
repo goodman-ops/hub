@@ -2,7 +2,7 @@
     <div class="container">
         <Carousel
             :class="{
-                ios: isIos,
+                ios: isIOS,
                 'offset-currency-info-on-disabled': request.paymentOptions.length > 1,
             }"
             :entries="request.paymentOptions.map((paymentOptions) => paymentOptions.currency)"
@@ -57,6 +57,7 @@
 <script lang="ts">
 import { Component, Vue, Watch } from 'vue-property-decorator';
 import { Carousel, ArrowLeftSmallIcon } from '@nimiq/vue-components';
+import { BrowserDetection } from '@nimiq/utils';
 import { ParsedCheckoutRequest } from '../lib/RequestTypes';
 import BitcoinCheckoutOption from '../components/BitcoinCheckoutOption.vue';
 import EthereumCheckoutOption from '../components/EthereumCheckoutOption.vue';
@@ -82,7 +83,7 @@ export default class Checkout extends Vue {
     private leftSlide!: Currency;
     private rightSlide!: Currency;
     private availableCurrencies: Currency[] = [];
-    private isIos: boolean = this._isIos();
+    private readonly isIOS: boolean = BrowserDetection.isIOS();
 
     @Watch('selectedCurrency', { immediate: true })
     private updateUnselected() {
@@ -120,15 +121,6 @@ export default class Checkout extends Vue {
         return {
             Currency,
         };
-    }
-
-    private _isIos() {
-        const ua = window.navigator.userAgent;
-        const iOS = !!ua.match(/iPad/i) || !!ua.match(/iPhone/i);
-        const webkit = !!ua.match(/WebKit/i);
-        const iOSSafari = iOS && webkit && !ua.match(/CriOS/i);
-
-        return iOSSafari && (/iP(hone|od|ad)/).test(window.navigator.platform);
     }
 }
 </script>
