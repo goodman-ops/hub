@@ -129,6 +129,9 @@ export default class CheckoutOption<
         fetchedData = await CheckoutServerApi.fetchPaymentOption(this.request.callbackUrl, this.paymentOptions.currency,
             this.paymentOptions.type, this.request.csrf);
 
+        // @ts-ignore: Call signatures for generic union types are not currently supported, see
+        // https://github.com/microsoft/TypeScript/issues/30613 and
+        // https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-3.html#caveats
         this.paymentOptions.update(fetchedData);
 
         // update timeout in case that expiry changed

@@ -2,7 +2,10 @@
     <div class="container">
         <div class="spacer"></div>
         <Carousel
-            :class="{'offset-currency-info-on-disabled': request.paymentOptions.length > 1}"
+            :class="{
+                ios: isIOS,
+                'offset-currency-info-on-disabled': request.paymentOptions.length > 1,
+            }"
             :entries="request.paymentOptions.map((paymentOptions) => paymentOptions.currency)"
             :animationDuration="500"
             :selected="selectedCurrency"
@@ -47,7 +50,7 @@
 
         <button class="global-close nq-button-s" @click="close">
             <ArrowLeftSmallIcon/>
-            Cancel Payment
+            Cancel <span>Payment</span>
         </button>
         <div class="spacer"></div>
 
@@ -68,6 +71,7 @@
 <script lang="ts">
 import { Component, Vue, Watch } from 'vue-property-decorator';
 import { BottomOverlay, Carousel, ArrowLeftSmallIcon } from '@nimiq/vue-components';
+import { BrowserDetection } from '@nimiq/utils';
 import { ParsedCheckoutRequest } from '../lib/RequestTypes';
 import BitcoinCheckoutOption from '../components/BitcoinCheckoutOption.vue';
 import EthereumCheckoutOption from '../components/EthereumCheckoutOption.vue';
@@ -97,6 +101,7 @@ export default class Checkout extends Vue {
     private availableCurrencies: Currency[] = [];
     private disclaimerOverlayClosed: boolean = false;
     private screenFitsDisclaimer: boolean = true;
+    private readonly isIOS: boolean = BrowserDetection.isIOS();
 
     @Watch('selectedCurrency', { immediate: true })
     private updateUnselected() {
@@ -207,7 +212,7 @@ export default class Checkout extends Vue {
         flex-direction: column;
         align-items: center;
 
-        --currency-info-translate-y: -7.875rem;
+        --currency-info-translate-y: -8.75rem;
         transition:
             transform .5s cubic-bezier(.67,0,.16,1),
             opacity .25s var(--nimiq-ease);
@@ -262,7 +267,18 @@ export default class Checkout extends Vue {
         .carousel >>> .confirmed .nq-card {
             /* 56px for mobile browser address bar */
             /* 7.5rem for Nimiq logo & cancel button */
-            height: calc(100vh - 7.5rem - 56px);
+            --iosBottomBar: 0px;
+            height: calc(100vh - 7.5rem - 56px - var(--iosBottomBar));
+            min-height: 71rem;
+        }
+
+        .carousel >>> .currency-info .nq-h1 {
+            margin-top: 0;
+        }
+
+        /* IOS specific */
+        .carousel.ios >>> .confirmed .nq-card {
+            --iosBottomBar: 74px;
         }
     }
 

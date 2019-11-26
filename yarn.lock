@@ -786,7 +786,7 @@
 
 "@nimiq/vue-components@https://github.com/nimiq/vue-components.git#daniel/build/hub/cashlinks+checkout":
   version "0.1.0"
-  resolved "https://github.com/nimiq/vue-components.git#c9cb4ad7da8460d2d09a5dc8a33c52f81b5687b3"
+  resolved "https://github.com/nimiq/vue-components.git#64d1e83964a6a425a8cf2845a8f262093fd92274"
   dependencies:
     "@nimiq/style" "^0.7.6"
     big-integer "^1.6.44"
@@ -2882,14 +2882,6 @@ cssstyle@^1.0.0:
   dependencies:
     cssom "0.3.x"
 
-currency-codes@^1.5.0:
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/currency-codes/-/currency-codes-1.5.0.tgz#c98206903d8ec6178c4b57287273eb6d8e7b9624"
-  integrity sha512-S0703ftUp2/NR+BKZ51cfWtuzEIzGlrZm5cphUekJGp6B6x+vSWBS2w9dd1i8jqX8YwEzVrYxKlH0nST5EArnw==
-  dependencies:
-    first-match "~0.0.1"
-    nub "~0.0.0"
-
 cyclist@~0.2.2:
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/cyclist/-/cyclist-0.2.2.tgz#1b33792e11e914a2fd6d6ed6447464444e5fa640"
@@ -3812,11 +3804,6 @@ find-up@^3.0.0:
   dependencies:
     locate-path "^3.0.0"
 
-first-match@~0.0.1:
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/first-match/-/first-match-0.0.1.tgz#a60ec642700f0f437234ebb7ec3f382476e542fd"
-  integrity sha1-pg7GQnAPD0NyNOu37D84JHblQv0=
-
 flush-write-stream@^1.0.0:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/flush-write-stream/-/flush-write-stream-1.0.3.tgz#c5d586ef38af6097650b49bc41b55fabb19f35bd"
@@ -4452,11 +4439,11 @@ ini@^1.3.4, ini@~1.3.0:
   integrity sha512-RZY5huIKCMRWDUqZlEi72f/lmXKMvuszcMBduliQ3nnWbx9X/ZBQO7DijMEYS9EhHBb2qacRUMtC7svLwe0lcw==
 
 input-format@^0.2.4:
-  version "0.2.4"
-  resolved "https://registry.yarnpkg.com/input-format/-/input-format-0.2.4.tgz#cb535ac879445908b432c5c341f98a493a1743bf"
-  integrity sha512-1Jo08hAodqk94579lRLCxg6g5nMYbe06ySwP7Dydl26DkmqYfVJL6bV5JuqwQ35Z4f81ad6bh5cbgWNxL5euyg==
+  version "0.2.8"
+  resolved "https://registry.yarnpkg.com/input-format/-/input-format-0.2.8.tgz#5e63d0f789a2081c1673c17c21bd0f9fd11d0ba4"
+  integrity sha512-PUBQ7LQMq4xdF4nEXxZTKGRAA6QTCz2icH2bU1WBDn9GcP8mKygpOqqivf41vSfFd3UagzqcMFMSswqngQGvuA==
   dependencies:
-    prop-types "^15.5.6"
+    prop-types "^15.7.2"
 
 internal-ip@^4.0.0:
   version "4.0.0"
@@ -6635,11 +6622,6 @@ nth-check@^1.0.2, nth-check@~1.0.1:
   dependencies:
     boolbase "~1.0.0"
 
-nub@~0.0.0:
-  version "0.0.0"
-  resolved "https://registry.yarnpkg.com/nub/-/nub-0.0.0.tgz#b369bd32bdde66af59605c3b0520bc219dccc04f"
-  integrity sha1-s2m9Mr3eZq9ZYFw7BSC8IZ3MwE8=
-
 num2fraction@^1.2.2:
   version "1.2.2"
   resolved "https://registry.yarnpkg.com/num2fraction/-/num2fraction-1.2.2.tgz#6f682b6a027a4e9ddfa4564cd2589d1d4e669ede"
@@ -7680,7 +7662,7 @@ prompts@^2.0.1:
     kleur "^3.0.2"
     sisteransi "^1.0.0"
 
-prop-types@^15.5.6:
+prop-types@^15.7.2:
   version "15.7.2"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.7.2.tgz#52c41e75b8c87e72b9d9360e0206b99dcbffa6c5"
   integrity sha512-8QQikdH7//R2vurIJSutZ1smHYTcLpRWEOlHnzcWHmBYrOGUysKwSsrC89BCiFj3CbrfJ/nXFdJepOVrY1GCHQ==
@@ -7898,9 +7880,9 @@ rc@^1.2.7:
     strip-json-comments "~2.0.1"
 
 react-is@^16.8.1:
-  version "16.10.2"
-  resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.10.2.tgz#984120fd4d16800e9a738208ab1fba422d23b5ab"
-  integrity sha512-INBT1QEgtcCCgvccr5/86CfD71fw9EPmDxgiJX4I2Ddr6ZsV6iFXsuby+qWJPtmNuMY0zByTsG4468P7nHuNWA==
+  version "16.12.0"
+  resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.12.0.tgz#2cc0fe0fba742d97fd527c42a13bec4eeb06241c"
+  integrity sha512-rPCkf/mWBtKc97aLL9/txD8DZdemK0vkA3JMLShjlJB3Pj3s+lpf1KaBzMfQrAmhMQB0n1cU/SUGgKKBCe837Q==
 
 read-pkg-up@^1.0.1:
   version "1.0.1"
@@ -9195,10 +9177,10 @@ typedarray@^0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
 
-typescript@^3.4.2:
-  version "3.4.2"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.4.2.tgz#9ed4e6475d906f589200193be056f5913caed481"
-  integrity sha512-Og2Vn6Mk7JAuWA1hQdDQN/Ekm/SchX80VzLhjKN9ETYrIepBFAd8PkOdOTK2nKt0FCkmMZKBJvQ1dV1gIxPu/A==
+typescript@^3.5.1:
+  version "3.5.1"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.5.1.tgz#ba72a6a600b2158139c5dd8850f700e231464202"
+  integrity sha512-64HkdiRv1yYZsSe4xC1WVgamNigVYjlssIoaH2HcZF0+ijsk5YK2g0G34w9wJkze8+5ow4STd22AynfO6ZYYLw==
 
 typeson-registry@^1.0.0-alpha.20:
   version "1.0.0-alpha.21"

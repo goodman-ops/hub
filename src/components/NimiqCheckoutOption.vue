@@ -3,8 +3,8 @@
     <CurrencyInfo v-if="request.paymentOptions.length > 1"
         :currency="paymentOptions.currency"
         :fiatCurrency="request.fiatCurrency"
-        :fiatFeeAmount="paymentOptions.fiatFee(request.fiatAmount, request.fiatCurrency)"
-        />
+        :fiatFeeAmount="paymentOptions.fiatFee(request.fiatAmount)"
+    />
     <SmallPage>
         <transition name="transition-fade">
             <StatusScreen
@@ -30,12 +30,11 @@
                 :cryptoAmount="{
                     amount: paymentOptions.amount,
                     currency: paymentOptions.currency,
-                    digits: paymentOptions.digits,
+                    decimals: paymentOptions.decimals,
                 }"
                 :fiatAmount="request.fiatAmount && request.fiatCurrency ? {
-                    amount: request.fiatAmount * 10 ** request.fiatCurrency.digits,
-                    currency: request.fiatCurrency.code,
-                    digits: request.fiatCurrency.digits,
+                    amount: request.fiatAmount,
+                    currency: request.fiatCurrency,
                 } : null"
                 :address="paymentOptions.protocolSpecific.recipient
                     ? paymentOptions.protocolSpecific.recipient.toUserFriendlyAddress()

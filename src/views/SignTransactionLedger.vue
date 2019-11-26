@@ -8,12 +8,11 @@
                 :cryptoAmount="{
                     amount: checkoutPaymentOptions.amount + checkoutPaymentOptions.protocolSpecific.fee,
                     currency: checkoutPaymentOptions.currency,
-                    digits: checkoutPaymentOptions.digits,
+                    decimals: checkoutPaymentOptions.decimals,
                 }"
                 :fiatAmount="request.fiatAmount && request.fiatCurrency ? {
-                    amount: request.fiatAmount * 10 ** request.fiatCurrency.digits,
-                    currency: request.fiatCurrency.code,
-                    digits: request.fiatCurrency.digits,
+                    amount: request.fiatAmount,
+                    currency: request.fiatCurrency,
                 } : null"
                 :address="checkoutPaymentOptions.protocolSpecific.recipient
                     ? checkoutPaymentOptions.protocolSpecific.recipient.toUserFriendlyAddress()

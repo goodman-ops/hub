@@ -5,26 +5,29 @@
             <img v-else-if="currencyIcon" :src="currencyIcon"/>
             {{currency}}
         </h1>
-        <p class="nq-text">{{ fiatFeeAmount === 0
-            ? 'No Fee'
-            : isAlmostFree
-                ? `~0 ${fiatCurrency.code} Fee`
-                : `~${fiatFeeAmount.toFixed(fiatCurrency.digits)} ${fiatCurrency.code} Fee`
-        }}</p>
+        <p class="nq-text">
+            <span v-if="fiatFeeAmount === 0">No</span>
+            <span v-else-if="isAlmostFree">~ 0</span>
+            <span v-else>
+                ~
+                <FiatAmount :amount="fiatFeeAmount" :currency="fiatCurrency" />
+            </span>
+            Fee
+        </p>
     </div>
 </template>
 
 <script lang="ts">
 import { Component, Vue, Prop } from 'vue-property-decorator';
+import { FiatAmount } from '@nimiq/vue-components';
 import { Currency } from '../lib/PublicRequestTypes';
-import { CurrencyCodeRecord } from 'currency-codes';
 
-@Component
+@Component({components: {FiatAmount}})
 export default class CurrencyInfo extends Vue {
-    @Prop(String) private currency!: Currency;
+    @Prop({ type: String, required: true }) private currency!: Currency;
+    @Prop({ type: String, required: true }) private fiatCurrency!: string;
+    @Prop({ type: Number, required: true }) private fiatFeeAmount!: number;
     @Prop(String) private currencyIcon?: string;
-    @Prop(Object) private fiatCurrency!: CurrencyCodeRecord;
-    @Prop(Number) private fiatFeeAmount!: number;
 
     private data() {
         return {
@@ -33,7 +36,12 @@ export default class CurrencyInfo extends Vue {
     }
 
     private get isAlmostFree() {
-        return this.fiatFeeAmount !== 0 && Math.round(this.fiatFeeAmount * 10 ** this.fiatCurrency.digits) === 0;
+        // Check whether the amount is less than 1 of the smallest unit by checking whether all digits of the rendered
+        // number are 0.
+        return this.fiatFeeAmount !== 0
+            && !!this.fiatFeeAmount.toLocaleString('en-US', { style: 'currency', currency: this.fiatCurrency })
+                .replace(/\D+/g, '') // remove all non-digits
+                .match(/^0+$/);
     }
 }
 </script>
@@ -60,7 +68,7 @@ export default class CurrencyInfo extends Vue {
 
     .currency-info p {
         margin-top: 0;
-        margin-bottom: 3.375rem;
+        margin-bottom: 3.25rem;
         font-size: 2.5rem;
     }
 </style>

@@ -3,7 +3,7 @@
         <CurrencyInfo v-if="request.paymentOptions.length > 1"
             :currency="paymentOptions.currency"
             :fiatCurrency="request.fiatCurrency"
-            :fiatFeeAmount="paymentOptions.fiatFee(request.fiatAmount, request.fiatCurrency)"
+            :fiatFeeAmount="paymentOptions.fiatFee(request.fiatAmount)"
             :currencyIcon="icon"/>
 
         <div class="nq-card-wrapper">
@@ -32,12 +32,11 @@
                         :cryptoAmount="{
                             amount: paymentOptions.amount,
                             currency: paymentOptions.currency,
-                            digits: paymentOptions.digits,
+                            decimals: paymentOptions.decimals,
                         }"
                         :fiatAmount="request.fiatAmount && request.fiatCurrency ? {
-                            amount: request.fiatAmount * 10 ** request.fiatCurrency.digits,
-                            currency: request.fiatCurrency.code,
-                            digits: request.fiatCurrency.digits,
+                            amount: request.fiatAmount,
+                            currency: request.fiatCurrency,
                         } : null"
                         :address="paymentOptions.protocolSpecific.recipient"
                         :origin="rpcState.origin"
@@ -54,9 +53,9 @@
                         <div class="amounts">
                             <Amount class="crypto nq-light-blue"
                                 :currency="paymentOptions.currency"
-                                :totalDecimals="paymentOptions.digits"
+                                :totalDecimals="paymentOptions.decimals"
                                 :minDecimals="0"
-                                :maxDecimals="paymentOptions.digits < 8 ? paymentOptions.digits : 8"
+                                :maxDecimals="paymentOptions.decimals < 8 ? paymentOptions.decimals : 8"
                                 :amount="paymentOptions.amount"
                             />
                             <div v-if="paymentOptions.fee !== 0" class="fee">
@@ -70,7 +69,7 @@
                             {{ paymentOptions.feeString }}
                         </p>
                         <QrCode
-                            :data="paymentOptions.paymentLink"
+                            :data="paymentLink"
                             :fill="{
                                 type: 'radial-gradient',
                                 position: [1, 1, 0, 1, 1, Math.sqrt(2)],
@@ -80,10 +79,10 @@
                         />
                     </PageBody>
                     <PageFooter v-if="selected">
-                        <a class="nq-button light-blue use-app-button"
+                        <button class="nq-button light-blue use-app-button"
                             :disabled="appNotFound"
                             @click="checkBlur"
-                            :href="paymentOptions.paymentLink"
+                            :href="paymentLink"
                         >
                             <template v-if="appNotFound">
                                 <span>No App found</span>
@@ -92,13 +91,15 @@
                             <template v-else>
                                 Open Wallet App
                             </template>
-                        </a>
+                        </button>
                         <p class="nq-text-s" @click="manualPaymentDetailsOpen = true" >
                             Enter manually<CaretRightSmallIcon/>
                         </p>
                     </PageFooter>
                     <PageFooter v-else>
-                        <button class="nq-button light-blue" @click="selectCurrency">Pay with {{currencyFullName}}</button>
+                        <button class="nq-button light-blue" @click="selectCurrency">
+                            Pay with {{currencyFullName}}
+                        </button>
                     </PageFooter>
                 </SmallPage>
                 <CheckoutManualPaymentDetails
@@ -125,6 +126,7 @@ import {
     StopwatchIcon,
     UnderPaymentIcon,
     Amount,
+    FiatAmount,
 } from '@nimiq/vue-components';
 import { PaymentState } from '../lib/PublicRequestTypes';
 import { AvailableParsedPaymentOptions } from '../lib/RequestTypes';
@@ -147,6 +149,7 @@ import CheckoutManualPaymentDetails from './CheckoutManualPaymentDetails.vue';
     StopwatchIcon,
     UnderPaymentIcon,
     Amount,
+    FiatAmount,
 }})
 export default class NonNimiqCheckoutOption<
     Parsed extends AvailableParsedPaymentOptions
@@ -172,7 +175,16 @@ export default class NonNimiqCheckoutOption<
         super.destroyed();
     }
 
+    protected get paymentLink(): string {
+        throw new Error('Needs to be implemented by child classes.');
+    }
+
     protected async selectCurrency() {
+        if (document.activeElement) {
+            // prevent the “Open wallet app” button to have focus by default when clicking on the “Pay with…” button
+            // (happens only on mobile devices)
+            (document.activeElement as HTMLElement).blur();
+        }
         if (this.request.callbackUrl) {
             this.statusScreenState = StatusScreen.State.LOADING;
             this.showStatusScreen = true;
@@ -182,6 +194,7 @@ export default class NonNimiqCheckoutOption<
         this.checkNetworkInterval = window.setInterval(async () => {
             this.lastPaymentState = await this.getState();
         }, 10000);
+
         return true;
     }
 
@@ -303,6 +316,7 @@ export default class NonNimiqCheckoutOption<
         padding-top: 0;
         padding-bottom: 0;
         text-align: center;
+        overflow: hidden;
     }
 
     .payment-option.confirmed .page-body {
@@ -369,12 +383,24 @@ export default class NonNimiqCheckoutOption<
         line-height: 2.75rem;
     }
 
-    .page-footer a.nq-button {
-        line-height: 7.5rem;
-        margin: 2rem 4.75rem 2rem;
+    .page-footer {
+        align-items: center;
     }
 
-    .page-footer a.nq-button + p.nq-text-s {
+    .page-footer button.nq-button {
+        line-height: 7.5rem;
+        margin: 2rem 4.75rem 2rem;
+        box-sizing: content-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-evenly;
+        align-items: center;
+        --padding: .625rem;
+        padding-top: var(--padding);
+        padding-bottom: var(--padding);
+    }
+
+    .page-footer button.nq-button + p.nq-text-s {
         align-self: center;
         color:  rgba(31, 35, 72, 0.5);
         align-items: center;
@@ -383,18 +409,10 @@ export default class NonNimiqCheckoutOption<
         cursor: pointer;
     }
 
-    .page-footer a.nq-button + p.nq-text-s > .nq-icon {
+    .page-footer button.nq-button + p.nq-text-s > .nq-icon {
         --icon-size: 1.2rem;
         height: var(--icon-size);
         width: var(--icon-size);
-    }
-
-    .use-app-button {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-evenly;
-        padding-top: 0.625rem;
-        padding-bottom: 0.625rem;
     }
 
     .use-app-button > span {

@@ -1,18 +1,24 @@
 type BigInteger = import('big-integer').BigInteger; // imports only the type without bundling
-import CurrencyCode from 'currency-codes';
-import { isMilliseconds } from './Constants';
 import { toNonScientificNumberString } from '@nimiq/utils';
+import { isMilliseconds } from './Constants';
 import {
     RequestType,
-    PaymentOptions,
     Currency,
     PaymentMethod,
+    PaymentOptionsForCurrencyAndType,
 } from './PublicRequestTypes';
-import { ParsedNimiqDirectPaymentOptions } from './paymentOptions/NimiqPaymentOptions';
-import { ParsedEtherDirectPaymentOptions } from './paymentOptions/EtherPaymentOptions';
-import { ParsedBitcoinDirectPaymentOptions } from './paymentOptions/BitcoinPaymentOptions';
-
-export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+import {
+    ParsedNimiqProtocolSpecific,
+    ParsedNimiqDirectPaymentOptions,
+} from './paymentOptions/NimiqPaymentOptions';
+import {
+    ParsedEtherProtocolSpecific,
+    ParsedEtherDirectPaymentOptions,
+} from './paymentOptions/EtherPaymentOptions';
+import {
+    ParsedBitcoinProtocolSpecific,
+    ParsedBitcoinDirectPaymentOptions,
+} from './paymentOptions/BitcoinPaymentOptions';
 
 export interface ParsedBasicRequest {
     kind: RequestType;
@@ -39,34 +45,56 @@ export interface ParsedSignTransactionRequest extends ParsedBasicRequest {
     validityStartHeight: number; // FIXME To be made optional when hub has its own network
 }
 
+export type ParsedProtocolSpecificForCurrency<C extends Currency> =
+    C extends Currency.NIM ? ParsedNimiqProtocolSpecific
+    : C extends Currency.BTC ? ParsedBitcoinProtocolSpecific
+    : C extends Currency.ETH ? ParsedEtherProtocolSpecific
+    : {} | undefined;
+
 export interface ParsedPaymentOptions<C extends Currency, T extends PaymentMethod> {
     readonly currency: C;
     readonly type: T;
+    readonly decimals: number;
+    protocolSpecific: ParsedProtocolSpecificForCurrency<C>;
+    amount: number | BigInteger;
     expires?: number;
-    paymentLink: string;
-    raw(): PaymentOptions<C, T>;
+    constructor: ParsedPaymentOptionsForCurrencyAndType<C, T>;
+    new(options: PaymentOptionsForCurrencyAndType<C, T>, ...optionalArgs: any[]):
+        ParsedPaymentOptionsForCurrencyAndType<C, T>;
+    raw(): PaymentOptionsForCurrencyAndType<C, T>;
 }
 
 export abstract class ParsedPaymentOptions<C extends Currency, T extends PaymentMethod>
     implements ParsedPaymentOptions<C, T> {
-    public abstract amount: number | BigInteger;
-    public readonly abstract digits: number;
-    public readonly abstract minDigits: number;
-    public readonly abstract maxDigits: number;
-    public expires?: number;
 
-    public constructor(option: PaymentOptions<C, T>) {
-        if (!this.isNonNegativeInteger(option.amount)) {
+    protected constructor(options: PaymentOptionsForCurrencyAndType<C, T>) {
+        if (options.currency !== this.currency || options.type !== this.type) {
+            throw new Error(`Can't parse given options as ${this.constructor.name}.`);
+        }
+        if (!this.isNonNegativeInteger(options.amount)) {
             throw new Error('amount must be a non-negative integer');
         }
-        this.expires = typeof option.expires === 'number'
-            ? isMilliseconds(option.expires)
-                ? option.expires
-                : option.expires * 1000
+        this.expires = typeof options.expires === 'number'
+            ? isMilliseconds(options.expires)
+                ? options.expires
+                : options.expires * 1000
             : undefined;
     }
 
-    public abstract update(options: PaymentOptions<C, T>): void;
+    public update<P extends ParsedPaymentOptions<C, T>>(
+        this: P,
+        options: PaymentOptionsForCurrencyAndType<C, T>,
+        ...additionalArgs: any[]
+    ) {
+        const parsedOptions = new this.constructor(options as any, ...additionalArgs); // parse to check validity
+        this.amount = parsedOptions.amount; // amount must exist on all parsed options
+        this.expires = parsedOptions.expires !== undefined ? parsedOptions.expires : this.expires;
+        for (const key of
+            Object.keys(parsedOptions.protocolSpecific) as Array<keyof typeof parsedOptions.protocolSpecific>) {
+            if (parsedOptions.protocolSpecific[key] === undefined) continue;
+            this.protocolSpecific[key] = parsedOptions.protocolSpecific[key];
+        }
+    }
 
     protected isNonNegativeInteger(value: string | number | bigint | BigInteger) {
         try {
@@ -96,7 +124,7 @@ export interface ParsedCheckoutRequest extends ParsedBasicRequest {
     csrf?: string;
     data: Uint8Array;
     time: number;
-    fiatCurrency?: CurrencyCode.CurrencyCodeRecord;
+    fiatCurrency?: string;
     fiatAmount?: number;
     paymentOptions: AvailableParsedPaymentOptions[];
 }

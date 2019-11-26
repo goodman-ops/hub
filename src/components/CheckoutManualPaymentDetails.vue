@@ -6,12 +6,11 @@
             :cryptoAmount="{
                 amount: paymentOptions.amount,
                 currency: paymentOptions.currency,
-                digits: paymentOptions.digits,
+                decimals: paymentOptions.decimals,
             }"
             :fiatAmount="request.fiatAmount && request.fiatCurrency ? {
-                amount: request.fiatAmount * 10 ** request.fiatCurrency.digits,
-                currency: request.fiatCurrency.code,
-                digits: request.fiatCurrency.digits,
+                amount: request.fiatAmount,
+                currency: request.fiatCurrency,
             } : null"
             :address="paymentOptions.protocolSpecific.recipient"
             :origin="rpcState.origin"
@@ -120,13 +119,20 @@ export default CheckoutManualPaymentDetails;
         margin-top: 2rem;
     }
 
-    .page-header >>> .nq-h1 {
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
+    .page-header >>> h1.nq-h1 {
+        margin-top: 0;
+        margin-bottom: 0;
     }
 
     .nq-notice {
         margin: 0;
         text-align: center;
+    }
+
+    @media (max-width: 375px) {
+        .page-header >>> h1.nq-h1 {
+            font-size: 2.5rem;
+            line-height: 3.25rem;
+        }
     }
 </style>
