@@ -1,11 +1,12 @@
 import { TX_VALIDITY_WINDOW, TX_MIN_VALIDITY_DURATION } from '../Constants';
 import { Currency, PaymentMethod, PaymentOptions } from '../PublicRequestTypes';
 import { ParsedPaymentOptions } from '../RequestTypes';
-import { toNonScientificNumberString } from '@nimiq/utils';
+import { toNonScientificNumberString, Utf8Tools } from '@nimiq/utils';
 
 export interface NimiqProtocolSpecific {
     fee?: number | string;
     feePerByte?: number | string;
+    extraData?: Uint8Array | string;
     validityDuration?: number;
     flags?: number;
     sender?: string;
@@ -26,11 +27,18 @@ export type NimiqDirectPaymentOptions = PaymentOptions<Currency.NIM, PaymentMeth
 
 export class ParsedNimiqDirectPaymentOptions extends ParsedPaymentOptions<Currency.NIM, PaymentMethod.DIRECT> {
     public amount: number;
-    private extraData: Uint8Array;
 
-    public constructor(options: NimiqDirectPaymentOptions, extraData: Uint8Array) {
+    public constructor(options: NimiqDirectPaymentOptions) {
         super(options);
-        this.extraData = extraData;
+
+        if (options.protocolSpecific.extraData !== undefined && typeof options.protocolSpecific.extraData !== 'string'
+            && !(options.protocolSpecific.extraData instanceof Uint8Array)) {
+            throw new Error('extraData must be a string or Uint8Array');
+        }
+        const extraData = typeof options.protocolSpecific.extraData === 'string'
+            ? Utf8Tools.stringToUtf8ByteArray(options.protocolSpecific.extraData)
+            : options.protocolSpecific.extraData || new Uint8Array(0);
+
         this.amount = parseInt(toNonScientificNumberString(options.amount), 10);
 
         let sender: Nimiq.Address | undefined;
@@ -111,6 +119,7 @@ export class ParsedNimiqDirectPaymentOptions extends ParsedPaymentOptions<Curren
             forceSender: !!options.protocolSpecific.forceSender,
             fee,
             feePerByte,
+            extraData,
             flags: flags || Nimiq.Transaction.Flag.NONE,
             recipient,
             recipientType,
@@ -154,10 +163,6 @@ export class ParsedNimiqDirectPaymentOptions extends ParsedPaymentOptions<Curren
             return 0;
         }
         return this.fee * fiatAmount / this.amount;
-    }
-
-    public update(options: NimiqDirectPaymentOptions) {
-        super.update(options, this.extraData);
     }
 
     public raw(): NimiqDirectPaymentOptions {
