@@ -1,7 +1,11 @@
 import { WalletType } from './WalletInfo';
-import { NimiqProtocolSpecific, NimiqDirectPaymentOptions } from './paymentOptions/NimiqPaymentOptions';
-import { EtherProtocolSpecific, EtherDirectPaymentOptions } from './paymentOptions/EtherPaymentOptions';
-import { BitcoinProtocolSpecific, BitcoinDirectPaymentOptions } from './paymentOptions/BitcoinPaymentOptions';
+
+type NimiqProtocolSpecific = import('./paymentOptions/NimiqPaymentOptions').NimiqProtocolSpecific;
+type NimiqDirectPaymentOptions = import('./paymentOptions/NimiqPaymentOptions').NimiqDirectPaymentOptions;
+type BitcoinProtocolSpecific = import('./paymentOptions/BitcoinPaymentOptions').BitcoinProtocolSpecific;
+type BitcoinDirectPaymentOptions = import('./paymentOptions/BitcoinPaymentOptions').BitcoinDirectPaymentOptions;
+type EtherProtocolSpecific = import('./paymentOptions/EtherPaymentOptions').EtherProtocolSpecific;
+type EtherDirectPaymentOptions = import('./paymentOptions/EtherPaymentOptions').EtherDirectPaymentOptions;
 
 export enum RequestType {
     LIST = 'list',
