@@ -360,7 +360,7 @@ class Demo {
             console.log('Result', result);
             if(result.fileExported) {
                 document.querySelector('#result').textContent = result.wordsExported
-                    ? 'Export sucessful'
+                    ? 'Export successful'
                     : 'File exported';
             } else {
                 document.querySelector('#result').textContent = result.wordsExported
@@ -377,7 +377,7 @@ class Demo {
         try {
             const result = await this.client.changePassword(this._createChangePasswordRequest(accountId));
             console.log('Result', result);
-            document.querySelector('#result').textContent = 'Export sucessful';
+            document.querySelector('#result').textContent = 'Successfully changed Password';
         } catch (e) {
             console.error(e);
             document.querySelector('#result').textContent = `Error: ${e.message || e}`;
