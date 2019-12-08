@@ -44,6 +44,7 @@ const DUMMY_DATA = {
             5000000,
             'Ein Cashlink test Cashlink',
             CashlinkState.CLAIMED,
+            Cashlink.DEFAULT_THEME,
             Date.now(),
             'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
             undefined,

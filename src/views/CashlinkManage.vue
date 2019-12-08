@@ -2,7 +2,7 @@
     <div class="container pad-bottom" v-if="retrievedCashlink">
         <SmallPage class="cashlink-receive">
             <transition name="transition-fade">
-                <StatusScreen v-if="!isTxSent" state="loading" :title="title" :status="status" lightBlue/>
+                <StatusScreen v-if="!isTxSent || this.request.skipSharing" :state="state" :title="title" :status="status" lightBlue/>
             </transition>
 
             <PageBody>
@@ -57,14 +57,13 @@
 <script lang="ts">
 import { Component, Vue, Watch } from 'vue-property-decorator';
 import staticStore, { Static } from '../lib/StaticStore';
-import { ParsedCashlinkRequest } from '../lib/RequestTypes';
+import { ParsedCreateCashlinkRequest, ParsedManageCashlinkRequest } from '../lib/RequestTypes';
 import { RequestType } from '../lib/PublicRequestTypes';
 import { SmallPage, PageBody, PageFooter, Account, CheckmarkSmallIcon, Copyable } from '@nimiq/vue-components';
 import StatusScreen from '../components/StatusScreen.vue';
 import { NetworkClient } from '@nimiq/network-client';
 import { loadNimiq } from '../lib/Helpers';
 import Cashlink from '../lib/Cashlink';
-import { CashlinkState } from '@/lib/PublicRequestTypes';
 import { CashlinkStore } from '../lib/CashlinkStore';
 import { State } from 'vuex-class';
 import KeyguardClient from '@nimiq/keyguard-client';
@@ -82,7 +81,7 @@ import Config from 'config';
     Copyable,
 }})
 export default class CashlinkManage extends Vue {
-    @Static private request!: ParsedCashlinkRequest;
+    @Static private request!: ParsedManageCashlinkRequest | ParsedCreateCashlinkRequest;
     @Static private cashlink?: Cashlink;
     @Static private keyguardRequest?: KeyguardClient.SignTransactionRequest;
     @State private keyguardResult?: KeyguardClient.SignTransactionResult;
@@ -99,7 +98,7 @@ export default class CashlinkManage extends Vue {
 
     private async mounted() {
         let storedCashlink;
-        if (this.request.cashlinkAddress) {
+        if ('cashlinkAddress' in this.request && !!this.request.cashlinkAddress) {
             storedCashlink = await CashlinkStore.Instance.get(this.request.cashlinkAddress.toUserFriendlyAddress());
             if (!storedCashlink) {
                 this.$rpc.reject(new Error('Could not find requested Cashlink'));
@@ -165,7 +164,10 @@ export default class CashlinkManage extends Vue {
 
             network.on(NetworkClient.Events.TRANSACTION_RELAYED, async (txInfo: any) => {
                 this.isTxSent = true;
-                window.setTimeout(() => this.state = StatusScreen.State.SUCCESS, StatusScreen.SUCCESS_REDIRECT_DELAY);
+                if ('skipSharing' in this.request && this.request.skipSharing) {
+                    this.state = StatusScreen.State.SUCCESS;
+                    window.setTimeout(() => this.close(), StatusScreen.SUCCESS_REDIRECT_DELAY);
+                }
             });
         }
     }
@@ -175,16 +177,23 @@ export default class CashlinkManage extends Vue {
     }
 
     private get link(): string {
-        return `${window.location.origin}/${RequestType.CASHLINK}/#${this.retrievedCashlink!.render()}`;
+        return `${window.location.origin}/cashlink/#${this.retrievedCashlink!.render()}`;
     }
 
     private close() {
-        this.$rpc.resolve({
+        const result: PublicCashlink = {
             address: this.retrievedCashlink!.address.toUserFriendlyAddress(),
             message: this.retrievedCashlink!.message,
+            value: this.retrievedCashlink!.value,
             status: this.retrievedCashlink!.state,
             sender: this.retrievedCashlink!.originalSender,
-        } as PublicCashlink);
+            theme: this.retrievedCashlink!.theme,
+        };
+        if ('returnCashlink' in this.request && this.request.returnCashlink) {
+            // exposes the cashlink private key to the caller
+            result.cashlink = this.link;
+        }
+        this.$rpc.resolve(result);
     }
 
     private copy() {

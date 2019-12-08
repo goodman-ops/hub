@@ -27,6 +27,7 @@ import Cashlink from '@/lib/Cashlink';
 import CookieJar from '@/lib/CookieJar';
 import { captureException } from '@sentry/browser';
 import { ERROR_CANCELED } from './Constants';
+import { isPriviledgedOrigin } from '@/lib/Helpers';
 import Config from 'config';
 
 export default class RpcApi {
@@ -52,7 +53,8 @@ export default class RpcApi {
 
         this._registerHubApis([
             RequestType.SIGN_TRANSACTION,
-            RequestType.CASHLINK,
+            RequestType.CREATE_CASHLINK,
+            RequestType.MANAGE_CASHLINK,
             RequestType.CHECKOUT,
             RequestType.ONBOARD,
             RequestType.SIGNUP,
@@ -183,13 +185,10 @@ export default class RpcApi {
     private async _hubApiHandler(requestType: RequestType, state: RpcState, arg: RpcRequest) {
         let request;
 
-        if (!this._3rdPartyRequestWhitelist.includes(requestType)) {
-            // Check that a non-whitelisted request comes from a privileged origin
-            if (!Config.privilegedOrigins.includes(state.origin)
-                && !Config.privilegedOrigins.includes('*')) {
-                state.reply(ResponseStatus.ERROR, new Error('Unauthorized'));
-                return;
-            }
+        // Check that a non-whitelisted request comes from a privileged origin
+        if (!this._3rdPartyRequestWhitelist.includes(requestType) && !isPriviledgedOrigin(state.origin)) {
+            state.reply(ResponseStatus.ERROR, new Error(`${state.origin} is unauthorized to call ${requestType}`));
+            return;
         }
 
         this._staticStore.rpcState = state;

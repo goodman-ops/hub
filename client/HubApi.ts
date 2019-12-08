@@ -23,9 +23,11 @@ import {
     SimpleResult,
     ExportResult,
     SignedMessage,
-    CashlinkRequest,
+    CreateCashlinkRequest,
+    ManageCashlinkRequest,
     Cashlink,
     CashlinkState,
+    CashlinkTheme,
     Currency,
     PaymentMethod,
     PaymentState,
@@ -38,6 +40,7 @@ export default class HubApi<DB extends BehaviorType = BehaviorType.POPUP> { // D
     public static readonly RedirectRequestBehavior = RedirectRequestBehavior;
     public static readonly PopupRequestBehavior = PopupRequestBehavior;
     public static readonly CashlinkState = CashlinkState;
+    public static readonly CashlinkTheme = CashlinkTheme;
     public static readonly Currency = Currency;
     public static readonly PaymentMethod = PaymentMethod;
     public static readonly PaymentState = PaymentState;
@@ -101,10 +104,17 @@ export default class HubApi<DB extends BehaviorType = BehaviorType.POPUP> { // D
      */
 
     public createCashlink<B extends BehaviorType = DB>(
-        request: Promise<CashlinkRequest> | CashlinkRequest,
+        request: Promise<CreateCashlinkRequest> | CreateCashlinkRequest,
         requestBehavior: RequestBehavior<B> = this._defaultBehavior as any,
     ): Promise<B extends BehaviorType.REDIRECT ? void : Cashlink> {
-        return this._request(requestBehavior, RequestType.CASHLINK, [request]);
+        return this._request(requestBehavior, RequestType.CREATE_CASHLINK, [request]);
+    }
+
+    public manageCashlink<B extends BehaviorType = DB>(
+        request: Promise<ManageCashlinkRequest> | ManageCashlinkRequest,
+        requestBehavior: RequestBehavior<B> = this._defaultBehavior as any,
+    ): Promise<B extends BehaviorType.REDIRECT ? void : Cashlink> {
+        return this._request(requestBehavior, RequestType.MANAGE_CASHLINK, [request]);
     }
 
     public checkout<B extends BehaviorType = DB>(

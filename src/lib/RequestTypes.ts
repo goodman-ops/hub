@@ -1,3 +1,5 @@
+import { CashlinkTheme } from './PublicRequestTypes';
+
 type BigInteger = import('big-integer').BigInteger; // imports only the type without bundling
 import { toNonScientificNumberString } from '@nimiq/utils';
 import { isMilliseconds } from './Constants';
@@ -143,15 +145,24 @@ export interface ParsedExportRequest extends ParsedSimpleRequest {
     wordsOnly?: boolean;
 }
 
-export interface ParsedCashlinkRequest extends ParsedBasicRequest {
+export interface ParsedCreateCashlinkRequest extends ParsedBasicRequest {
     senderAddress?: Nimiq.Address;
     senderBalance?: number;
-    cashlinkAddress?: Nimiq.Address;
+    value?: number;
+    message?: string;
+    theme: CashlinkTheme;
+    returnCashlink: boolean;
+    skipSharing: boolean;
+}
+
+export interface ParsedManageCashlinkRequest extends ParsedBasicRequest {
+    cashlinkAddress: Nimiq.Address;
 }
 
 // Discriminated Unions
 export type ParsedRpcRequest = ParsedSignTransactionRequest
-                             | ParsedCashlinkRequest
+                             | ParsedCreateCashlinkRequest
+                             | ParsedManageCashlinkRequest
                              | ParsedCheckoutRequest
                              | ParsedBasicRequest
                              | ParsedSimpleRequest

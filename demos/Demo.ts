@@ -11,6 +11,8 @@ import {
     ExportRequest,
     Cashlink,
     RpcResult,
+    CreateCashlinkRequest,
+    CashlinkTheme,
     RequestType,
 } from '../src/lib/PublicRequestTypes';
 import { RedirectRequestBehavior } from '../client/RequestBehavior';
@@ -67,28 +69,78 @@ class Demo {
             await checkout(await generateCheckoutRequest());
         });
 
+        const $returnCashlinkCheckbox = document.querySelector('#cashlink-return-cashlink') as HTMLInputElement;
+        $returnCashlinkCheckbox.addEventListener('change', () => {
+            (document.querySelector('#cashlink-skip-sharing-container') as HTMLElement).style.display =
+                $returnCashlinkCheckbox.checked ? 'block' : 'none';
+        });
+
+        const themeSelector = document.querySelector('#cashlink-theme') as HTMLSelectElement;
+        Object.entries(CashlinkTheme).forEach(([themeName, themeId]) => {
+            // filter out entries added by typescript for reverse mapping
+            if (typeof themeId !== 'number') return;
+            const option = document.createElement('option');
+            option.text = themeName;
+            option.value = themeId.toString();
+            themeSelector.add(option);
+        });
+
         document.querySelector('button#create-cashlink').addEventListener('click', async () => {
             try {
-                const $radio = document.querySelector('input[type="radio"]:checked');
-                const result = await demo.client.createCashlink({
-                    appName: 'Accounts Demos',
-                    senderAddress: $radio.getAttribute('data-address'),
-                    senderBalance: 5000,
-                });
+                let value: number | undefined =
+                    parseInt((document.querySelector('#cashlink-value') as HTMLInputElement).value);
+                value = !Number.isNaN(value) ? value : undefined;
+
+                let message: string | undefined =
+                    (document.querySelector('#cashlink-message') as HTMLInputElement).value;
+                message = !!message ? message : undefined;
+
+                const autoTruncateMessage: boolean =
+                    (document.querySelector('#cashlink-auto-truncate-message') as HTMLInputElement).checked;
+
+                let theme: CashlinkTheme | undefined = Number.parseInt(themeSelector.value);
+                theme = !Number.isNaN(theme) ? theme : undefined;
+
+                let request: CreateCashlinkRequest = {
+                    appName: 'Hub Demos',
+                    value,
+                    message,
+                    autoTruncateMessage,
+                    theme,
+                };
+
+                const useSelectedAddress = (document.querySelector(
+                    '#cashlink-use-selected-address') as HTMLInputElement).checked;
+                if (useSelectedAddress) {
+                    const $addressRadio = document.querySelector('input[name="address"]:checked');
+                    if (!$addressRadio) {
+                        alert('You have no account to send a cashlink from, create an account first (signup)');
+                        throw new Error('No account found');
+                    }
+                    request = {
+                        ...request,
+                        senderAddress: $addressRadio.getAttribute('data-address'),
+                        senderBalance: 5e5, // just set an arbitrary balance for testing
+                    };
+                }
+
+                const returnCashlink = $returnCashlinkCheckbox.checked;
+                if (returnCashlink) {
+                    const skipSharing = (document.querySelector(
+                        '#cashlink-skip-sharing') as HTMLInputElement).checked;
+                    request = {
+                        ...request,
+                        returnCashlink,
+                        skipSharing,
+                    };
+                }
+
+                const result = await demo.client.createCashlink(request);
                 console.log('Result', result);
-                document.querySelector('#result').textContent = 'Cashlink created';
-            } catch (e) {
-                console.error(e);
-                document.querySelector('#result').textContent = `Error: ${e.message || e}`;
-            }
-        });
-        document.querySelector('button#create-cashlink-no-sender').addEventListener('click', async () => {
-            try {
-                const result = await demo.client.createCashlink({
-                    appName: 'Accounts Demos',
-                });
-                console.log('Result', result);
-                document.querySelector('#result').textContent = 'Cashlink created';
+                document.querySelector('#result').textContent = `Cashlink created${result.cashlink
+                    ? `: ${result.cashlink}`
+                    : ''
+                }`;
             } catch (e) {
                 console.error(e);
                 document.querySelector('#result').textContent = `Error: ${e.message || e}`;
@@ -165,7 +217,7 @@ class Demo {
         });
 
         function generateSignTransactionRequest(): SignTransactionRequest {
-            const $radio = document.querySelector('input[type="radio"]:checked');
+            const $radio = document.querySelector('input[name="address"]:checked');
             if (!$radio) {
                 alert('You have no account to send a tx from, create an account first (signup)');
                 throw new Error('No account found');
@@ -194,7 +246,7 @@ class Demo {
 
             let sender: string | undefined;
             if (useSelectedAddress) {
-                const $radio = document.querySelector('input[type="radio"]:checked');
+                const $radio = document.querySelector('input[name="address"]:checked');
                 if (!$radio) {
                     alert('You have no account to checkout with, create an account first (signup)');
                     throw new Error('No account found');
@@ -292,7 +344,7 @@ class Demo {
         document.querySelector('button#sign-message-with-account').addEventListener('click', async () => {
             const message = (document.querySelector('#message') as HTMLInputElement).value || undefined;
 
-            const $radio = document.querySelector('input[type="radio"]:checked');
+            const $radio = document.querySelector('input[name="address"]:checked');
             if (!$radio) {
                 alert('You have no account to send a tx from, create an account first (signup)');
                 throw new Error('No account found');
@@ -535,10 +587,9 @@ class Demo {
         $ul.innerHTML = cashlinksHtml;
         document.querySelectorAll('button.cashlink-manage').forEach(element => {
             element.addEventListener('click', async () => {
-                await this.client.createCashlink({
+                await this.client.manageCashlink({
                     appName: 'Accounts Demos',
-                    // senderAddress: $radio.getAttribute('data-address'),
-                    cashlinkAddress: element.getAttribute('data-cashlink-address'),
+                    cashlinkAddress: element.getAttribute('data-cashlink-address')!,
                 });
             });
         });
@@ -563,7 +614,7 @@ class Demo {
                 html += `
                             <li>
                                 <label>
-                                    <input type="radio" name="sign-tx-address" data-address="${acc.address}" data-wallet-id="${wallet.accountId}">
+                                    <input type="radio" name="address" data-address="${acc.address}" data-wallet-id="${wallet.accountId}">
                                     ${acc.label}
                                     <button class="rename" data-wallet-id="${wallet.accountId}" data-address="${acc.address}">Rename</button>
                                 </label>
@@ -574,7 +625,7 @@ class Demo {
                 html += `
                             <li>
                                 <label>
-                                    <input type="radio" name="sign-tx-address" data-address="${con.address}" data-wallet-id="${wallet.accountId}">
+                                    <input type="radio" name="address" data-address="${con.address}" data-wallet-id="${wallet.accountId}">
                                     <strong>Contract</strong> ${con.label}
                                     <button class="rename" data-wallet-id="${wallet.accountId}" data-address="${con.address}">Rename</button>
                                 </label>
@@ -585,8 +636,8 @@ class Demo {
         });
 
         $ul.innerHTML = html;
-        if (document.querySelector('input[type="radio"]')) {
-            (document.querySelector('input[type="radio"]') as HTMLInputElement).checked = true;
+        if (document.querySelector('input[name="address"]')) {
+            (document.querySelector('input[name="address"]') as HTMLInputElement).checked = true;
         }
         document.querySelectorAll('button.export').forEach(element => {
             element.addEventListener('click', async () => this.export(element.getAttribute('data-wallet-id')));

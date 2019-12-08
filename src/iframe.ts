@@ -4,7 +4,8 @@ import { WalletStore } from '@/lib/WalletStore';
 import { WalletInfoEntry, WalletInfo } from '@/lib/WalletInfo';
 import CookieJar from '@/lib/CookieJar';
 import Config from 'config';
-import { Account, Cashlink } from './lib/PublicRequestTypes';
+import { Account, Cashlink as PublicCashlink } from './lib/PublicRequestTypes';
+import Cashlink from './lib/Cashlink';
 import { CashlinkStore } from './lib/CashlinkStore';
 import { CashlinkType } from './lib/Cashlink';
 
@@ -48,16 +49,18 @@ class IFrameApi {
         return [];
     }
 
-    public static async cashlinks(): Promise<Cashlink[]> {
+    public static async cashlinks(): Promise<PublicCashlink[]> {
         if (BrowserDetection.isIOS() || BrowserDetection.isSafari()) return [];
 
         const cashlinks = await CashlinkStore.Instance.list();
         return cashlinks.map((cashlink) => ({
             address: cashlink.address,
             message: cashlink.message,
+            value: cashlink.value,
             status: cashlink.state,
             sender: cashlink.originalSender!,
             recipient: cashlink.finalRecipient,
+            theme: cashlink.theme || Cashlink.DEFAULT_THEME,
         }));
     }
 }

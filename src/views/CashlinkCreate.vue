@@ -64,7 +64,7 @@
                 </div>
                 <AmountWithFee v-model="liveAmountAndFee" :available-balance="accountOrContractInfo.balance" ref="amountWithFee"/>
                 <div class="message-with-tooltip">
-                    <LabelInput class="message" :vanishing="true" placeholder="Add a message..." :maxBytes="64" v-model="message" />
+                    <LabelInput class="message" :vanishing="true" placeholder="Add a message..." :maxBytes="255" v-model="message" />
                     <Tooltip :reference="tooltipTarget" ref="tooltip">
                         This message will be stored in the Cashlink.
                         It won’t be part of the public Blockchain and might get lost after the Cashlink was claimed.
@@ -92,7 +92,6 @@
 import { Component, Vue, Watch } from 'vue-property-decorator';
 import { Getter, Mutation, State } from 'vuex-class';
 import Cashlink from '../lib/Cashlink';
-import { CashlinkState } from '@/lib/PublicRequestTypes';
 import staticStore, { Static } from '@/lib/StaticStore';
 import StatusScreen from '../components/StatusScreen.vue';
 import { ERROR_CANCELED } from '../lib/Constants';
@@ -100,7 +99,7 @@ import { State as RpcState } from '@nimiq/rpc';
 import HubApi from '../../client/HubApi';
 import { loadNimiq } from '../lib/Helpers';
 import { AccountInfo } from '../lib/AccountInfo';
-import { ParsedCashlinkRequest } from '../lib/RequestTypes';
+import { ParsedCreateCashlinkRequest } from '../lib/RequestTypes';
 import { RequestType } from '../lib/PublicRequestTypes';
 import { NetworkClient } from '@nimiq/network-client';
 import { WalletStore } from '../lib/WalletStore';
@@ -153,7 +152,7 @@ enum Details {
     Tooltip,
 }})
 export default class CashlinkCreate extends Vue {
-    @Static private request!: ParsedCashlinkRequest;
+    @Static private request!: ParsedCreateCashlinkRequest;
     @Static private rpcState!: RpcState;
 
     @State private wallets!: WalletInfo[];
@@ -195,9 +194,14 @@ export default class CashlinkCreate extends Vue {
     }
 
     public async created() {
-        if (this.request.cashlinkAddress) {
-            this.$rpc.routerReplace(`${RequestType.CASHLINK}-success`);
-            return;
+        // TODO set accountOrContractInfo.balance immediately to senderBalance if provided to be able to immediately
+        // evaluate the value
+        if (this.request.value) {
+            this.liveAmountAndFee.amount = this.request.value;
+        }
+
+        if (this.request.message) {
+            this.message = this.request.message;
         }
 
         if (!this.request.senderAddress || !this.request.senderBalance) {
@@ -342,6 +346,9 @@ export default class CashlinkCreate extends Vue {
             cashlink.value = this.liveAmountAndFee.amount;
             cashlink.fee = this.fee;
             cashlink.message = this.message;
+            if (this.request.theme) {
+                cashlink.theme = this.request.theme;
+            }
             const senderAccount = this.findWalletByAddress(this.accountOrContractInfo!.userFriendlyAddress, true)!;
 
             // proceed to transaction signing
@@ -392,7 +399,7 @@ export default class CashlinkCreate extends Vue {
     }
 
     private login() {
-        staticStore.originalRouteName = RequestType.CASHLINK;
+        staticStore.originalRouteName = RequestType.CREATE_CASHLINK;
         this.$rpc.routerPush(RequestType.ONBOARD);
     }
 
