@@ -3,5 +3,6 @@
 
 export { default } from '../dist/src/client/HubApi';
 
-// export public request types for convenience of the HupApi user
+// export public request types and RequestBehavior types for convenience of the HupApi user
 export * from '../dist/src/src/lib/PublicRequestTypes';
+export { PopupRequestBehavior, RedirectRequestBehavior } from '../dist/src/client/RequestBehavior';
