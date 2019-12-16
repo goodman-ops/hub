@@ -35,36 +35,3 @@ export const loadNimiq = async () => {
 export function isPriviledgedOrigin(origin: string) {
     return Config.privilegedOrigins.includes(origin) || Config.privilegedOrigins.includes('*');
 }
-
-type TruncateStringResult = { truncatedString: string, truncatedBytes: Uint8Array, didTruncate: boolean };
-export function truncateString(str: string, byteLength: number, applyEllipsis: boolean = true): TruncateStringResult {
-    let bytes = Utf8Tools.stringToUtf8ByteArray(str);
-
-    if (bytes.length <= byteLength) {
-        return {
-            truncatedString: str,
-            truncatedBytes: bytes,
-            didTruncate: false,
-        };
-    }
-
-    const ellipsisBytes = [226, 128, 166];
-    if (byteLength < ellipsisBytes.length) applyEllipsis = false;
-
-    bytes = bytes.subarray(0, byteLength - (applyEllipsis ? ellipsisBytes.length : 0));
-
-    // Cut off last byte until byte array is valid utf-8
-    while (!Utf8Tools.isValidUtf8(bytes)) bytes = bytes.subarray(0, bytes.length - 1);
-
-    if (applyEllipsis) {
-        // Add ellipsis. Note that we can safely extend by the ellipsis bytes as we shoved these bytes off before.
-        bytes = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length + ellipsisBytes.length);
-        bytes.set(ellipsisBytes, bytes.length - ellipsisBytes.length);
-    }
-
-    return {
-        truncatedString: Utf8Tools.utf8ByteArrayToString(bytes),
-        truncatedBytes: bytes,
-        didTruncate: true,
-    };
-}

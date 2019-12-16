@@ -10,7 +10,7 @@ import {
 import LabelingMachine from './LabelingMachine';
 import { ContractInfoEntry, VestingContractInfoEntry } from './ContractInfo';
 import { AccountInfoEntry } from './AccountInfo';
-import { truncateString } from './Helpers';
+import { Utf8Tools } from '@nimiq/utils';
 
 class CookieJar {
     public static readonly VERSION = 3;
@@ -100,12 +100,13 @@ class CookieJar {
     }
 
     public static encodeAndcutLabel(label: string): Uint8Array {
-        const { truncatedBytes, didTruncate } = truncateString(label, LABEL_MAX_LENGTH);
+        const labelBytes = Utf8Tools.stringToUtf8ByteArray(label);
+        const { result, didTruncate } = Utf8Tools.truncateToUtf8ByteLength(labelBytes, LABEL_MAX_LENGTH);
         if (didTruncate && typeof global === 'undefined') {
             // Warn when not running in NodeJS environment (running tests)
             console.warn('Label was shortened for cookie:', label);
         }
-        return truncatedBytes;
+        return result;
     }
 
     private static checkWalletDefaultLabel(firstAddress: Uint8Array, label: string, type: WalletType): string {

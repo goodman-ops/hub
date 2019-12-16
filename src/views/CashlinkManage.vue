@@ -1,11 +1,11 @@
 <template>
     <div class="container pad-bottom" v-if="retrievedCashlink">
-        <SmallPage class="cashlink-receive">
+        <SmallPage class="cashlink-receive" :class="{ 'fixed-height': this.request.skipSharing }">
             <transition name="transition-fade">
                 <StatusScreen v-if="!isTxSent || this.request.skipSharing" :state="state" :title="title" :status="status" lightBlue/>
             </transition>
 
-            <PageBody>
+            <PageBody v-if="!this.request.skipSharing">
                 <transition name="transition-fade">
                     <div v-if="!isManagementRequest && isTxSent" class="nq-green cashlink-status"><CheckmarkSmallIcon/>Cashlink created</div>
                 </transition>
@@ -17,7 +17,7 @@
                     </Copyable>
                 </div>
             </PageBody>
-            <PageFooter v-if="nativeShareAvailable">
+            <PageFooter v-if="nativeShareAvailable && !this.request.skipSharing">
                 <button class="nq-button copy" :class="copied ? 'green' : 'light-blue'" @click="copy">
                     <span v-if="copied"><CheckmarkSmallIcon /> Copied</span>
                     <span v-else>Copy</span>
@@ -169,6 +169,10 @@ export default class CashlinkManage extends Vue {
                     window.setTimeout(() => this.close(), StatusScreen.SUCCESS_REDIRECT_DELAY);
                 }
             });
+        } else if (!this.isManagementRequest && 'skipSharing' in this.request && this.request.skipSharing) {
+            // Handling for cashlink sent from Ledger for which the transaction is already sent in the ledger flow
+            this.state = StatusScreen.State.SUCCESS;
+            window.setTimeout(() => this.close(), StatusScreen.SUCCESS_REDIRECT_DELAY);
         }
     }
 
@@ -232,7 +236,11 @@ export default class CashlinkManage extends Vue {
 <style scoped>
     .cashlink-receive {
         position: relative;
+    }
+
+    .cashlink-receive:not(.fixed-height) {
         height: auto;
+        min-height: 70.5rem;
     }
 
     .status-screen {

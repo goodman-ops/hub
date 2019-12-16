@@ -1,5 +1,5 @@
 import { HISTORY_KEY_SELECTED_CURRENCY, isMilliseconds } from './Constants';
-import { isPriviledgedOrigin, truncateString } from '@/lib/Helpers';
+import { isPriviledgedOrigin } from '@/lib/Helpers';
 import { State } from '@nimiq/rpc';
 import {
     BasicRequest,
@@ -321,13 +321,13 @@ export class RequestParser {
                     if (typeof message !== 'string') {
                         throw new Error('Cashlink message must be a string');
                     }
-                    const { truncatedString, didTruncate } = truncateString(message, 255);
+                    const { result: truncated, didTruncate } = Utf8Tools.truncateToUtf8ByteLength(message, 255);
                     if (!('autoTruncateMessage' in createCashlinkRequest && createCashlinkRequest.autoTruncateMessage)
                         && didTruncate) {
                         throw new Error('Cashlink must be shorter than 256 bytes or autoTruncateMessage must be '
                             + 'enabled.');
                     }
-                    message = truncatedString;
+                    message = truncated;
                 }
 
                 const theme = createCashlinkRequest.theme || CashlinkTheme.UNSPECIFIED;
@@ -389,12 +389,16 @@ export class RequestParser {
                 } as SignTransactionRequest;
             case RequestType.CREATE_CASHLINK:
                 const createCashlinkRequest = request as ParsedCreateCashlinkRequest;
+                // Note that there is no need to export autoTruncateMessage as the message already got truncated
                 return {
                     appName: createCashlinkRequest.appName,
                     senderAddress: createCashlinkRequest.senderAddress
                             ? createCashlinkRequest.senderAddress.toUserFriendlyAddress()
                             : undefined,
                     senderBalance: createCashlinkRequest.senderBalance,
+                    value: createCashlinkRequest.value,
+                    message: createCashlinkRequest.message,
+                    theme: createCashlinkRequest.theme,
                     returnCashlink: createCashlinkRequest.returnCashlink,
                     skipSharing: createCashlinkRequest.skipSharing,
                 } as CreateCashlinkRequest;
