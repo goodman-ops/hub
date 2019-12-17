@@ -7,6 +7,7 @@ export default {
     privilegedOrigins: [
         'https://safe.nimiq.com',
         'https://hub.nimiq.com', // To allow CashlinkReceive to trigger signup/login/onboard
+        'https://www.nimiq.com', // To allow gift cards app to request returnCashlink
     ],
     redirectTarget: 'https://safe.nimiq.com',
     reportToSentry: true,
