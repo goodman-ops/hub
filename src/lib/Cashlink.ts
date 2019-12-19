@@ -79,6 +79,10 @@ class Cashlink {
         this._theme = theme;
     }
 
+    get isThemeEncodedInLink() {
+        return !!this._theme;
+    }
+
     set networkClient(client: NetworkClient) {
         this._networkClientResolver(client);
     }
