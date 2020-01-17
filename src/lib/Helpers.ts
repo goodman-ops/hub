@@ -5,7 +5,6 @@ import {
     NETWORK_MAIN,
     ERROR_INVALID_NETWORK,
 } from '../lib/Constants';
-import { Utf8Tools } from '@nimiq/utils';
 
 export const loadNimiq = async () => {
     await Nimiq.WasmHelper.doImport();

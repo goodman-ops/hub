@@ -79,7 +79,7 @@ class Cashlink {
         this._theme = theme;
     }
 
-    get isThemeEncodedInLink() {
+    get hasEncodedTheme() {
         return !!this._theme;
     }
 

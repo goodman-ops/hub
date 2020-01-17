@@ -151,7 +151,7 @@ export interface ParsedCreateCashlinkRequest extends ParsedBasicRequest {
     value?: number;
     message?: string;
     theme: CashlinkTheme;
-    returnCashlink: boolean;
+    returnLink: boolean;
     skipSharing: boolean;
 }
 
